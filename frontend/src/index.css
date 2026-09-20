@@ -1,0 +1,108 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ──────────────────────────────────────────
+   Base
+────────────────────────────────────────── */
+@layer base {
+  *, *::before, *::after {
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply bg-surface text-gray-100 font-sans;
+    background-color: #0a1410;
+  }
+
+  :focus-visible {
+    @apply outline-none ring-2 ring-primary-400 ring-offset-2 ring-offset-surface;
+  }
+}
+
+/* ──────────────────────────────────────────
+   Component utilities
+────────────────────────────────────────── */
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-primary-500 hover:bg-primary-400
+           text-white font-semibold text-sm transition-all duration-200
+           shadow-glow-sm hover:shadow-glow hover:-translate-y-0.5
+           focus-visible:ring-2 focus-visible:ring-primary-400 focus-visible:ring-offset-2 focus-visible:ring-offset-surface;
+  }
+
+  .btn-outline {
+    @apply inline-flex items-center gap-2 px-6 py-3 rounded-xl border border-surface-border
+           text-gray-300 hover:text-white hover:border-primary-500 hover:bg-surface-muted
+           font-semibold text-sm transition-all duration-200
+           focus-visible:ring-2 focus-visible:ring-primary-400;
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center gap-2 px-4 py-2 rounded-lg text-gray-400 hover:text-white
+           hover:bg-surface-muted font-medium text-sm transition-all duration-200;
+  }
+
+  .card {
+    @apply bg-surface-card border border-surface-border rounded-2xl shadow-card;
+  }
+
+  .section-container {
+    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
+
+  .gradient-text {
+    @apply bg-gradient-to-r from-primary-400 to-brand-lime bg-clip-text text-transparent;
+  }
+
+  .glass-card {
+    @apply bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl;
+  }
+
+  .nav-link {
+    @apply text-gray-400 hover:text-white text-sm font-medium transition-colors duration-200;
+  }
+
+  .badge {
+    @apply inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold;
+  }
+
+  .stat-number {
+    @apply font-display font-bold text-white;
+  }
+}
+
+/* ──────────────────────────────────────────
+   Custom scrollbar
+────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #0f1a14;
+}
+::-webkit-scrollbar-thumb {
+  background: #2a3d30;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #1aac72;
+}
+
+/* ──────────────────────────────────────────
+   Animation delays
+────────────────────────────────────────── */
+.delay-100 { animation-delay: 100ms; }
+.delay-200 { animation-delay: 200ms; }
+.delay-300 { animation-delay: 300ms; }
+.delay-400 { animation-delay: 400ms; }
+.delay-500 { animation-delay: 500ms; }
+.delay-600 { animation-delay: 600ms; }
+.delay-700 { animation-delay: 700ms; }
+.delay-800 { animation-delay: 800ms; }

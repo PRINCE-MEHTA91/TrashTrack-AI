@@ -31,3 +31,8 @@ pnpm-debug.log*
 # Builds
 /dist/
 /build/
+
+# Unusual folders/files
+postgres-portable/
+backend/test-auth.mjs
+backend/apply-schema.mjs

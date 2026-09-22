@@ -1,14 +1,22 @@
-import { ArrowRight, Leaf } from 'lucide-react'
+import { ArrowRight, Leaf } from "lucide-react";
 
 export default function CTASection() {
   return (
     <section id="cta" className="py-24 md:py-32">
       <div className="section-container">
         <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary-800 via-primary-700 to-primary-900 border border-primary-600/40 p-12 md:p-20 text-center shadow-glow-lg">
-          {/* Decorative orbs */}
-          <div className="absolute -top-16 -right-16 w-64 h-64 bg-primary-400/20 rounded-full blur-3xl pointer-events-none" aria-hidden="true" />
-          <div className="absolute -bottom-16 -left-16 w-64 h-64 bg-brand-lime/10 rounded-full blur-3xl pointer-events-none" aria-hidden="true" />
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[300px] bg-primary-500/10 rounded-full blur-3xl pointer-events-none" aria-hidden="true" />
+          <div
+            className="absolute -top-16 -right-16 w-64 h-64 bg-primary-400/20 rounded-full blur-3xl pointer-events-none"
+            aria-hidden="true"
+          />
+          <div
+            className="absolute -bottom-16 -left-16 w-64 h-64 bg-brand-lime/10 rounded-full blur-3xl pointer-events-none"
+            aria-hidden="true"
+          />
+          <div
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[300px] bg-primary-500/10 rounded-full blur-3xl pointer-events-none"
+            aria-hidden="true"
+          />
 
           <div className="relative z-10">
             <div className="flex justify-center mb-6">
@@ -25,8 +33,8 @@ export default function CTASection() {
             </h2>
 
             <p className="text-primary-200 text-lg md:text-xl mb-10 max-w-xl mx-auto">
-              Start reporting waste, managing workers, or running your municipality
-              dashboard today. Free to get started.
+              Start reporting waste, managing workers, or running your
+              municipality dashboard today. Free to get started.
             </p>
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -50,5 +58,5 @@ export default function CTASection() {
         </div>
       </div>
     </section>
-  )
+  );
 }

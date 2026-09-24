@@ -10,7 +10,6 @@ import {
   UserCircle2,
   HardHat,
   Building2,
-  Smartphone,
 } from "lucide-react";
 import AuthLayout from "../components/auth/AuthLayout";
 import {
@@ -19,6 +18,7 @@ import {
   OrDivider,
   GoogleButton,
 } from "../components/auth/FormField";
+import { useAuth } from "../context/AuthContext";
 function validate(form) {
   const errors = {};
 
@@ -43,6 +43,7 @@ function validate(form) {
 }
 export default function LoginPage() {
   const navigate = useNavigate();
+  const { login } = useAuth();
   const [form, setForm] = useState({
     role: "",
     email: "",
@@ -104,9 +105,9 @@ export default function LoginPage() {
         return;
       }
       
-      localStorage.setItem("token", data.token);
+      login(data.token, data.user);
       setIsLoading(false);
-      navigate(`/${data.user.role}/dashboard`);
+      navigate(`/${data.user.role}/home`);
     } catch (err) {
       setErrors({ general: "Unable to connect to the server." });
       setIsLoading(false);

@@ -3,6 +3,7 @@ import {
   signup,
   login,
   getMe,
+  updateMe,
 } from "../controllers/auth.controller.js";
 import { verifyToken, requireRole } from "../middleware/auth.middleware.js";
 
@@ -12,6 +13,7 @@ router.post("/signup", signup);
 router.post("/login", login);
 
 router.get("/me", verifyToken, getMe);
+router.put("/me", verifyToken, updateMe);
 
 export default router;
 

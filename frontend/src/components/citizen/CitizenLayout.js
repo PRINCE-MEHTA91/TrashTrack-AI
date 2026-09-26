@@ -112,7 +112,7 @@ export default function CitizenLayout() {
         {/* Sidebar footer – user mini profile */}
         <div className="px-3 py-4 border-t border-surface-border">
           <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-surface-muted">
-            <CitizenAvatar initials={initials} size="sm" />
+            <CitizenAvatar initials={initials} profileImage={user?.profile_image} size="sm" />
             <div className="flex-1 min-w-0">
               <p className="text-white text-xs font-semibold truncate">{user?.full_name}</p>
               <p className="text-citizen-400 text-xs">Citizen</p>
@@ -258,7 +258,7 @@ export default function CitizenLayout() {
               aria-expanded={profileOpen}
               aria-haspopup="true"
             >
-              <CitizenAvatar initials={initials} size="sm" />
+              <CitizenAvatar initials={initials} profileImage={user?.profile_image} size="sm" />
               <div className="hidden sm:block text-left">
                 <p className="text-xs font-semibold text-white leading-none">{user?.full_name}</p>
                 <p className="text-xs text-citizen-400 mt-0.5">Citizen</p>
@@ -350,13 +350,17 @@ export default function CitizenLayout() {
   );
 }
 
-export function CitizenAvatar({ initials, size = "sm" }) {
+export function CitizenAvatar({ initials, profileImage, size = "sm" }) {
   const sizeClasses = size === "sm" ? "w-8 h-8 text-xs" : "w-10 h-10 text-sm";
   return (
     <div
-      className={`${sizeClasses} rounded-full bg-gradient-to-br from-citizen-500 to-citizen-700 flex items-center justify-center font-bold text-white shrink-0 ring-2 ring-citizen-500/30`}
+      className={`${sizeClasses} rounded-full bg-gradient-to-br from-citizen-500 to-citizen-700 flex items-center justify-center font-bold text-white shrink-0 ring-2 ring-citizen-500/30 overflow-hidden`}
     >
-      {initials}
+      {profileImage ? (
+        <img src={profileImage} alt="Avatar" className="w-full h-full object-cover" />
+      ) : (
+        initials
+      )}
     </div>
   );
 }

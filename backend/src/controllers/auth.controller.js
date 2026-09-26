@@ -17,6 +17,9 @@ const SAFE_USER_FIELDS = `
   full_name,
   email,
   role,
+  profile_image,
+  phone_number,
+  address,
   is_email_verified,
   status,
   created_at,
@@ -86,7 +89,7 @@ export const login = async (req, res, next) => {
 
     // Fetch all users with this email
     const result = await query(
-      `SELECT id, password_hash, role, full_name, email,
+      `SELECT id, password_hash, role, full_name, email, profile_image, phone_number, address,
               is_email_verified, status, created_at, updated_at
        FROM users
        WHERE email = $1`,
@@ -138,7 +141,7 @@ export const login = async (req, res, next) => {
 export const getMe = async (req, res, next) => {
   try {
     const result = await query(
-      `SELECT id, full_name, email, role,
+      `SELECT id, full_name, email, role, profile_image, phone_number, address,
               is_email_verified, status, created_at, updated_at
        FROM users
        WHERE id = $1`,
@@ -149,6 +152,41 @@ export const getMe = async (req, res, next) => {
       return res
         .status(404)
         .json({ success: false, message: "User not found." });
+    }
+
+    return res.json({ success: true, user: result.rows[0] });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/** PUT /api/v1/auth/me Update user profile */
+export const updateMe = async (req, res, next) => {
+  try {
+    const { full_name, profile_image, address } = req.body;
+    let { phone_number } = req.body;
+
+    if (phone_number !== undefined) {
+      phone_number = phone_number.trim();
+      if (phone_number !== "" && !/^\d{10}$/.test(phone_number)) {
+        return res.status(400).json({ success: false, message: "Phone number must be exactly 10 digits." });
+      }
+    }
+    
+    const result = await query(
+      `UPDATE users
+       SET full_name = COALESCE($1, full_name),
+           profile_image = COALESCE($2, profile_image),
+           phone_number = COALESCE($3, phone_number),
+           address = COALESCE($4, address),
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = $5
+       RETURNING ${SAFE_USER_FIELDS}`,
+      [full_name, profile_image, phone_number, address, req.user.userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, message: "User not found." });
     }
 
     return res.json({ success: true, user: result.rows[0] });

@@ -3,7 +3,7 @@ import { User, Mail, Shield, Calendar, CheckCircle2, MapPin, Edit2, Save, Camera
 import { useAuth } from "../../context/AuthContext";
 import { CitizenAvatar } from "../../components/citizen/CitizenLayout";
 
-const API_URL = import.meta.env.VITE_API_URL;
+const API_URL = import.meta.env.VITE_API_URL || "https://trashtrack-ai.onrender.com/api/v1";
 
 function getInitials(name = "") {
   return name

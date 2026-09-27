@@ -2,6 +2,9 @@
 
 TrashTrack AI is a comprehensive smart waste management platform designed to connect citizens with municipal workers for efficient waste reporting, tracking, and resolution.
 
+## Live Links
+*   **Frontend (Vercel):** [https://trash-track-ai.vercel.app/](https://trash-track-ai.vercel.app/)
+*   **Backend API (Render):** [https://trashtrack-ai.onrender.com](https://trashtrack-ai.onrender.com)
 ## Features
 
 ### Role-Based Access
@@ -49,7 +52,11 @@ TrashTrack AI is a comprehensive smart waste management platform designed to con
 
 2.  **Frontend (`/frontend/.env`)**
     ```env
+    # For local development:
     VITE_API_URL=http://localhost:5000/api/v1
+    
+    # For production (deployed backend):
+    # VITE_API_URL=https://trashtrack-ai.onrender.com/api/v1
     ```
 
 ### Running Locally

@@ -2,7 +2,7 @@
 // shows prompt UI if pending, handles denied/unavailable/timeout, and saves to backend via JWT.
 import { useState, useEffect, useCallback, useRef } from "react";
 
-const API_URL = import.meta.env.VITE_API_URL;
+const API_URL = import.meta.env.VITE_API_URL || "https://trashtrack-ai.onrender.com/api/v1";
 
 /** Send captured coordinates to the backend. */
 async function sendLocationToBackend(coords, token) {

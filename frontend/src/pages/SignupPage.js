@@ -21,6 +21,8 @@ import {
   OrDivider,
   GoogleButton,
 } from "../components/auth/FormField";
+const API_URL = import.meta.env.VITE_API_URL || "https://trashtrack-ai.onrender.com/api/v1";
+
 function getPasswordStrength(pw) {
   if (!pw) return { score: 0, label: "", color: "" };
   let score = 0;
@@ -185,7 +187,7 @@ export default function SignupPage() {
     setErrors({});
     
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/auth/signup`, {
+      const res = await fetch(`${API_URL}/auth/signup`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ fullName: form.fullName, email: form.email, password: form.password, role: form.role }),

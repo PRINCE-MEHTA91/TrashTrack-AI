@@ -19,6 +19,8 @@ import {
   GoogleButton,
 } from "../components/auth/FormField";
 import { useAuth } from "../context/AuthContext";
+
+const API_URL = import.meta.env.VITE_API_URL || "https://trashtrack-ai.onrender.com/api/v1";
 function validate(form) {
   const errors = {};
 
@@ -92,7 +94,7 @@ export default function LoginPage() {
     setErrors({});
     
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/auth/login`, {
+      const res = await fetch(`${API_URL}/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: form.email, password: form.password, role: form.role }),

@@ -12,9 +12,11 @@ import {
   Leaf,
   ArrowRight,
   Plus,
-  Map,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
+import { useUserLocation } from "../../hooks/useUserLocation";
+import { LocationStatus, LocationSavedBadge } from "../../components/common/LocationStatus";
+import { LocationMap } from "../../components/common/LocationMap";
 import {
   MOCK_CITIZEN_STATS,
   MOCK_CITIZEN_ZONE,
@@ -43,47 +45,21 @@ function getGreeting() {
 }
 
 export default function CitizenHomePage() {
-  const { user } = useAuth();
+  const { user, getToken } = useAuth();
   const navigate = useNavigate();
-  const [stats]         = useState(MOCK_CITIZEN_STATS);        // TODO: replace with real API
-  const [zone]          = useState(MOCK_CITIZEN_ZONE);          // TODO: replace with real API
-  const [recentReports] = useState(MOCK_RECENT_REPORTS);       // TODO: replace with real API
-  const [notifications] = useState(MOCK_CITIZEN_NOTIFICATIONS); // TODO: replace with real API
-  const [showLocationPopup, setShowLocationPopup] = useState(false);
-  const [userLocation, setUserLocation] = useState(null);
+  const [stats]         = useState(MOCK_CITIZEN_STATS);
+  const [zone]          = useState(MOCK_CITIZEN_ZONE);
+  const [recentReports] = useState(MOCK_RECENT_REPORTS);
+  const [notifications] = useState(MOCK_CITIZEN_NOTIFICATIONS);
 
-  // Check location permission on mount
-  useEffect(() => {
-    if (navigator.permissions && navigator.permissions.query) {
-      navigator.permissions.query({ name: "geolocation" }).then((result) => {
-        if (result.state === "prompt") {
-          setShowLocationPopup(true);
-        } else if (result.state === "granted") {
-          fetchLocation();
-        }
-      });
-    } else {
-      setShowLocationPopup(true); // Fallback if permissions API is not supported
-    }
-  }, []);
-
-  const fetchLocation = () => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setUserLocation({
-            lat: position.coords.latitude,
-            lng: position.coords.longitude,
-          });
-          setShowLocationPopup(false);
-        },
-        (error) => {
-          console.error("Error fetching location:", error);
-          setShowLocationPopup(false);
-        }
-      );
-    }
-  };
+  const {
+    status: locStatus,
+    location: userLocation,
+    showPrompt,
+    errorMessage: locError,
+    requestLocation,
+    retry: retryLocation,
+  } = useUserLocation(getToken);
 
   const firstName = user?.full_name?.split(" ")[0] ?? "Citizen";
   const greeting  = getGreeting();
@@ -95,8 +71,40 @@ export default function CitizenHomePage() {
         name={firstName}
         greeting={greeting}
         zone={zone}
+        locationSaved={locStatus === "saved"}
         onReport={() => navigate("/citizen/report")}
       />
+
+      {/* ── Location Status Banner ── */}
+      <LocationStatus
+        status={locStatus}
+        errorMessage={locError}
+        showPrompt={showPrompt}
+        onAllow={requestLocation}
+        onRetry={retryLocation}
+        accentClass="bg-citizen-500 hover:bg-citizen-400"
+      />
+
+      {/* ── Location Map ── */}
+      <div id="citizen-location-map" className="card overflow-hidden">
+        <div className="flex items-center gap-2 px-5 pt-5 pb-3">
+          <MapPin className="w-4 h-4 text-citizen-400" />
+          <h3 className="font-display font-semibold text-white text-sm">Your Location</h3>
+        </div>
+        <div className="px-3 pb-3">
+          <LocationMap
+            status={locStatus}
+            location={userLocation}
+            errorMessage={locError}
+            showPrompt={showPrompt}
+            onAllow={requestLocation}
+            onRetry={retryLocation}
+            accentClass="bg-citizen-500 hover:bg-citizen-400"
+            title="Your current location"
+            className="h-56 md:h-64"
+          />
+        </div>
+      </div>
 
       {/* ── Stats Row ── */}
       <StatsRow stats={stats} />
@@ -109,21 +117,13 @@ export default function CitizenHomePage() {
         <RecentReports reports={recentReports} onViewAll={() => navigate("/citizen/complaints")} />
         <NotificationPreview notifications={notifications} onViewAll={() => navigate("/citizen/notifications")} />
       </div>
-      
-      {/* ── Location Permission Popup ── */}
-      {showLocationPopup && (
-        <LocationPermissionPopup 
-          onAllow={fetchLocation} 
-          onDeny={() => setShowLocationPopup(false)} 
-        />
-      )}
     </div>
   );
 }
 
 /* ─────────────────────────────────────────────────────────── */
 
-function WelcomeBanner({ name, greeting, zone, onReport }) {
+function WelcomeBanner({ name, greeting, zone, locationSaved, onReport }) {
   return (
     <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-citizen-900/60 via-surface-card to-surface-card border border-citizen-500/20 p-6">
       {/* Background glow */}
@@ -144,6 +144,9 @@ function WelcomeBanner({ name, greeting, zone, onReport }) {
             <span className="text-gray-400 text-sm">
               {zone.name} &bull; {zone.municipality}
             </span>
+          </div>
+          <div className="mt-1">
+            <LocationSavedBadge visible={locationSaved} />
           </div>
         </div>
 
@@ -366,32 +369,3 @@ function NotificationPreview({ notifications, onViewAll }) {
   );
 }
 
-function LocationPermissionPopup({ onAllow, onDeny }) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-      <div className="bg-surface-card border border-surface-border rounded-2xl p-6 max-w-sm w-full shadow-2xl animate-in fade-in zoom-in duration-200">
-        <div className="w-12 h-12 rounded-full bg-blue-500/15 border border-blue-500/30 flex items-center justify-center mb-4">
-          <Map className="w-6 h-6 text-blue-400" />
-        </div>
-        <h3 className="text-xl font-display font-bold text-white mb-2">Allow Location Access</h3>
-        <p className="text-sm text-gray-400 mb-6">
-          We need your location to automatically detect your zone and show relevant waste reports in your area.
-        </p>
-        <div className="flex flex-col gap-3">
-          <button
-            onClick={onAllow}
-            className="w-full py-2.5 rounded-xl bg-citizen-500 hover:bg-citizen-400 text-white font-semibold text-sm transition-colors"
-          >
-            Allow Access
-          </button>
-          <button
-            onClick={onDeny}
-            className="w-full py-2.5 rounded-xl bg-surface-muted hover:bg-surface-border text-gray-300 font-semibold text-sm transition-colors"
-          >
-            Not Now
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}

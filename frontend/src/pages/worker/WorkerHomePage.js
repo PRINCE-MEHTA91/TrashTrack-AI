@@ -13,6 +13,9 @@ import {
   Star,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
+import { useUserLocation } from "../../hooks/useUserLocation";
+import { LocationStatus, LocationSavedBadge } from "../../components/common/LocationStatus";
+import { LocationMap } from "../../components/common/LocationMap";
 import {
   MOCK_WORKER_STATS,
   MOCK_WORKER_ZONE,
@@ -34,11 +37,20 @@ const ACTIVITY_ICON = {
 };
 
 export default function WorkerHomePage() {
-  const { user } = useAuth();
-  const [stats] = useState(MOCK_WORKER_STATS);        // TODO: replace with real API
-  const [zone] = useState(MOCK_WORKER_ZONE);           // TODO: replace with real API
-  const [activity] = useState(MOCK_RECENT_ACTIVITY);  // TODO: replace with real API
-  const [activeTask] = useState(MOCK_ACTIVE_TASK);    // TODO: replace with real API
+  const { user, getToken } = useAuth();
+  const [stats] = useState(MOCK_WORKER_STATS);
+  const [zone] = useState(MOCK_WORKER_ZONE);
+  const [activity] = useState(MOCK_RECENT_ACTIVITY);
+  const [activeTask] = useState(MOCK_ACTIVE_TASK);
+
+  const {
+    status: locStatus,
+    location: userLocation,
+    showPrompt,
+    errorMessage: locError,
+    requestLocation,
+    retry: retryLocation,
+  } = useUserLocation(getToken);
 
   const firstName = user?.full_name?.split(" ")[0] ?? "Worker";
   const greeting  = getGreeting();
@@ -51,7 +63,39 @@ export default function WorkerHomePage() {
         fullName={user?.full_name}
         greeting={greeting}
         zone={zone}
+        locationSaved={locStatus === "saved"}
       />
+
+      {/* ── Location Status Banner ── */}
+      <LocationStatus
+        status={locStatus}
+        errorMessage={locError}
+        showPrompt={showPrompt}
+        onAllow={requestLocation}
+        onRetry={retryLocation}
+        accentClass="bg-primary-500 hover:bg-primary-400"
+      />
+
+      {/* ── Location Map ── */}
+      <div id="worker-location-map" className="card overflow-hidden">
+        <div className="flex items-center gap-2 px-5 pt-5 pb-3">
+          <MapPin className="w-4 h-4 text-primary-400" />
+          <h3 className="font-display font-semibold text-white text-sm">Your Location</h3>
+        </div>
+        <div className="px-3 pb-3">
+          <LocationMap
+            status={locStatus}
+            location={userLocation}
+            errorMessage={locError}
+            showPrompt={showPrompt}
+            onAllow={requestLocation}
+            onRetry={retryLocation}
+            accentClass="bg-primary-500 hover:bg-primary-400"
+            title="Your current location"
+            className="h-56 md:h-64"
+          />
+        </div>
+      </div>
 
       {/* ── Stats Row ── */}
       <StatsRow stats={stats} />
@@ -73,7 +117,7 @@ export default function WorkerHomePage() {
 
 /* ─────────────────────────────────────────────────── */
 
-function WelcomeBanner({ name, fullName, greeting, zone }) {
+function WelcomeBanner({ name, fullName, greeting, zone, locationSaved }) {
   return (
     <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary-900/60 via-surface-card to-surface-card border border-primary-500/20 p-6">
       {/* Background glow */}
@@ -93,6 +137,9 @@ function WelcomeBanner({ name, fullName, greeting, zone }) {
             <span className="text-gray-400 text-sm">
               {zone.name} &bull; {zone.municipality}
             </span>
+          </div>
+          <div className="mt-1">
+            <LocationSavedBadge visible={locationSaved} />
           </div>
         </div>
 

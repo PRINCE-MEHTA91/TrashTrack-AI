@@ -1,12 +1,12 @@
-# Security & Internal Documentation (Not for public repo)
+# Security
 /docs/
 
-# Environment Variables
+# Env
 .env
 .env.*
 !.env.example
 
-# OS generated files
+# OS
 .DS_Store
 .DS_Store?
 ._*
@@ -15,7 +15,7 @@
 ehthumbs.db
 Thumbs.db
 
-# IDEs and Editors
+# IDEs
 .vscode/
 .idea/
 *.swp
@@ -32,7 +32,16 @@ pnpm-debug.log*
 /dist/
 /build/
 
-# Unusual folders/files
+# Logs
+*.log
+
+# Unusual files
 postgres-portable/
-backend/test-auth.mjs
+remove-comments-deep.mjs
+backend/alter.js
 backend/apply-schema.mjs
+backend/init-db.mjs
+backend/migrate-location.mjs
+backend/test-auth.mjs
+backend/test-role.mjs
+backend/migrations/

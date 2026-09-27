@@ -3,6 +3,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import authRoutes from "./routes/auth.routes.js";
 import citizenRoutes from "./routes/citizen.routes.js";
+import locationRoutes from "./routes/location.routes.js";
 import { errorHandler } from "./middleware/error.middleware.js";
 import { query } from "./config/database.js";
 
@@ -14,6 +15,7 @@ app.use(cors());
 app.use(express.json());
 app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/citizen", citizenRoutes);
+app.use("/api/v1/location", locationRoutes);
 
 // Error handling middleware should be last
 app.use(errorHandler);

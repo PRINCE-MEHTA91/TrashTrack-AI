@@ -15,38 +15,25 @@ export const getCitizenStats = async (req, res, next) => {
   try {
     const citizenId = req.user.userId;
 
-    // TODO: Replace with real query once complaints table exists:
-    // const result = await query(
-    //   `SELECT
-    //     COUNT(*)                                          AS total,
-    //     COUNT(*) FILTER (WHERE status = 'PENDING')       AS pending,
-    //     COUNT(*) FILTER (WHERE status = 'IN_PROGRESS')   AS in_progress,
-    //     COUNT(*) FILTER (WHERE status IN ('RESOLVED','CLOSED','VERIFIED')) AS resolved
-    //   FROM complaints
-    //   WHERE citizen_id = $1`,
-    //   [citizenId]
-    // );
-    // const row = result.rows[0];
-    // return res.json({
-    //   success: true,
-    //   stats: {
-    //     totalReports:      Number(row.total),
-    //     pendingReports:    Number(row.pending),
-    //     inProgressReports: Number(row.in_progress),
-    //     resolvedReports:   Number(row.resolved),
-    //   },
-    // });
-
-    // Temporary stub – returns zeros until complaints table exists
+    const result = await query(
+      `SELECT
+        COUNT(*)                                          AS total,
+        COUNT(*) FILTER (WHERE status = 'PENDING' OR status = 'SUBMITTED')       AS pending,
+        COUNT(*) FILTER (WHERE status = 'IN_PROGRESS')   AS in_progress,
+        COUNT(*) FILTER (WHERE status IN ('RESOLVED','CLOSED','VERIFIED')) AS resolved
+      FROM complaints
+      WHERE citizen_id = $1`,
+      [citizenId]
+    );
+    const row = result.rows[0];
     return res.json({
       success: true,
       stats: {
-        totalReports:      0,
-        pendingReports:    0,
-        inProgressReports: 0,
-        resolvedReports:   0,
+        totalReports:      Number(row.total) || 0,
+        pendingReports:    Number(row.pending) || 0,
+        inProgressReports: Number(row.in_progress) || 0,
+        resolvedReports:   Number(row.resolved) || 0,
       },
-      _note: "Stats will be live once the complaints table is created.",
     });
   } catch (err) {
     next(err);

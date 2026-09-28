@@ -18,11 +18,12 @@ import { useAuth } from "../../context/AuthContext";
 import { useLocation } from "../../context/LocationContext";
 import { LocationStatus, LocationSavedBadge } from "../../components/common/LocationStatus";
 import { LocationMap } from "../../components/common/LocationMap";
+import { useEffect } from "react";
 import {
-  MOCK_CITIZEN_STATS,
-  MOCK_RECENT_REPORTS,
   MOCK_CITIZEN_NOTIFICATIONS,
 } from "../../mocks/citizenMockData";
+
+const API_URL = import.meta.env.VITE_API_URL || "https://trashtrack-ai.onrender.com/api/v1";
 
 const STATUS_CONFIG = {
   RESOLVED:    { label: "Resolved",    className: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30", icon: CheckCircle2 },
@@ -46,11 +47,17 @@ function getGreeting() {
 
 
 export default function CitizenHomePage() {
-  const { user } = useAuth();
+  const { user, getToken } = useAuth();
   const navigate = useNavigate();
-  const [stats]         = useState(MOCK_CITIZEN_STATS);
-  const [recentReports] = useState(MOCK_RECENT_REPORTS);
+  const [stats, setStats] = useState({
+    totalReports: 0,
+    pendingReports: 0,
+    inProgressReports: 0,
+    resolvedReports: 0,
+  });
+  const [recentReports, setRecentReports] = useState([]);
   const [notifications] = useState(MOCK_CITIZEN_NOTIFICATIONS);
+  const [loading, setLoading] = useState(true);
 
   // ── Single location state from context ──
   const {
@@ -62,6 +69,44 @@ export default function CitizenHomePage() {
     refreshLocation,
     retry: retryLocation,
   } = useLocation();
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const token = getToken();
+        if (!token) return;
+
+        const [statsRes, reportsRes] = await Promise.all([
+          fetch(`${API_URL}/citizen/stats`, {
+            headers: { Authorization: `Bearer ${token}` }
+          }),
+          fetch(`${API_URL}/complaints/me?limit=5`, {
+            headers: { Authorization: `Bearer ${token}` }
+          })
+        ]);
+
+        if (statsRes.ok) {
+          const statsData = await statsRes.json();
+          if (statsData.success) {
+            setStats(statsData.stats);
+          }
+        }
+
+        if (reportsRes.ok) {
+          const reportsData = await reportsRes.json();
+          if (reportsData.success) {
+            setRecentReports(reportsData.complaints);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch dashboard data:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [getToken]);
 
   const firstName = user?.full_name?.split(" ")[0] ?? "Citizen";
   const greeting  = getGreeting();
@@ -310,9 +355,9 @@ function RecentReports({ reports, onViewAll }) {
                   </div>
                   <div className="flex items-center gap-1.5 mt-1">
                     <MapPin className="w-3 h-3 text-gray-500 shrink-0" />
-                    <p className="text-xs text-gray-400 truncate">{report.location}</p>
+                    <p className="text-xs text-gray-400 truncate">{report.address || "Location unavailable"}</p>
                   </div>
-                  <p className="text-xs text-gray-600 mt-0.5">{report.id}</p>
+                  <p className="text-xs text-gray-600 mt-0.5 uppercase">{report.id.split('-')[0]}</p>
                 </div>
               </div>
             );

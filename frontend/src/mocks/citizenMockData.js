@@ -8,49 +8,6 @@
  * TODO: Replace each mock with a real API call when the endpoint is ready.
  */
 
-/** TODO: Replace with GET /api/v1/citizen/me/stats */
-export const MOCK_CITIZEN_STATS = {
-  totalReports: 12,
-  pendingReports: 3,
-  resolvedReports: 8,
-  inProgressReports: 1,
-};
-
-/** TODO: Replace with GET /api/v1/citizen/me/reports?limit=5 */
-export const MOCK_RECENT_REPORTS = [
-  {
-    id: "RPT-2024-001",
-    title: "Garbage pile near park entrance",
-    location: "Cubbon Park Gate, MG Road",
-    status: "RESOLVED",
-    createdAt: "2026-09-20T10:30:00Z",
-    wasteType: "ORGANIC",
-  },
-  {
-    id: "RPT-2024-002",
-    title: "Plastic waste dumping on roadside",
-    location: "Koramangala 5th Block",
-    status: "IN_PROGRESS",
-    createdAt: "2026-09-22T14:15:00Z",
-    wasteType: "PLASTIC",
-  },
-  {
-    id: "RPT-2024-003",
-    title: "Construction debris blocking footpath",
-    location: "Indiranagar 100ft Road",
-    status: "PENDING",
-    createdAt: "2026-09-24T09:45:00Z",
-    wasteType: "CONSTRUCTION",
-  },
-  {
-    id: "RPT-2024-004",
-    title: "Overflowing dustbin near bus stop",
-    location: "Bannerghatta Road, Stop 12",
-    status: "PENDING",
-    createdAt: "2026-09-25T08:00:00Z",
-    wasteType: "MIXED",
-  },
-];
 
 /** TODO: Replace with GET /api/v1/notifications?limit=3&unread=true */
 export const MOCK_CITIZEN_NOTIFICATIONS = [

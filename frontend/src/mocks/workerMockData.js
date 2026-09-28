@@ -18,13 +18,6 @@ export const MOCK_WORKER_STATS = {
   averageResolutionMin: 42,
 };
 
-/** TODO: Replace with GET /api/v1/workers/me/zone */
-export const MOCK_WORKER_ZONE = {
-  name: "Ward 14 – Andheri West",
-  municipality: "Brihanmumbai Municipal Corporation",
-  shortCode: "BMC-W14",
-};
-
 /** TODO: Replace with GET /api/v1/workers/me/tasks?limit=5&status=recent */
 export const MOCK_RECENT_ACTIVITY = [
   {

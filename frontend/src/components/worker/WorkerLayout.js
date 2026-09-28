@@ -12,8 +12,10 @@ import {
   ChevronDown,
   Trash2,
   Zap,
+  MapPin,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
+import { useLocation } from "../../context/LocationContext";
 import { MOCK_UNREAD_NOTIFICATIONS } from "../../mocks/workerMockData";
 
 const NAV_ITEMS = [
@@ -35,6 +37,7 @@ function getInitials(name = "") {
 
 export default function WorkerLayout() {
   const { user, logout } = useAuth();
+  const { displayLabel, refreshLocation, status: locStatus } = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
@@ -205,11 +208,20 @@ export default function WorkerLayout() {
             <span className="font-display font-bold text-white text-sm">TrashTrack AI</span>
           </div>
 
-          {/* Zone badge */}
-          <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-surface-muted border border-surface-border">
-            <Zap className="w-3.5 h-3.5 text-primary-400" />
-            <span className="text-xs font-medium text-gray-300">Ward 14 – Andheri West</span>
-          </div>
+          {/* Zone badge — clickable to refresh location */}
+          <button
+            id="worker-header-zone-btn"
+            onClick={refreshLocation}
+            title="Click to refresh your location"
+            className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-surface-muted border border-surface-border hover:border-primary-500/40 transition-colors cursor-pointer"
+          >
+            <MapPin className="w-3.5 h-3.5 text-primary-400" />
+            <span className="text-xs font-medium text-gray-300 max-w-[180px] truncate">
+              {locStatus === "checking" || locStatus === "saving"
+                ? "Detecting…"
+                : displayLabel || "Enable Location"}
+            </span>
+          </button>
 
           {/* Spacer */}
           <div className="flex-1" />

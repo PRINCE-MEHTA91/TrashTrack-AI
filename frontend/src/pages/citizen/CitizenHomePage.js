@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   CheckCircle2,
@@ -12,14 +12,14 @@ import {
   Leaf,
   ArrowRight,
   Plus,
+  Navigation,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
-import { useUserLocation } from "../../hooks/useUserLocation";
+import { useLocation } from "../../context/LocationContext";
 import { LocationStatus, LocationSavedBadge } from "../../components/common/LocationStatus";
 import { LocationMap } from "../../components/common/LocationMap";
 import {
   MOCK_CITIZEN_STATS,
-  MOCK_CITIZEN_ZONE,
   MOCK_RECENT_REPORTS,
   MOCK_CITIZEN_NOTIFICATIONS,
 } from "../../mocks/citizenMockData";
@@ -44,22 +44,24 @@ function getGreeting() {
   return "Good evening";
 }
 
+
 export default function CitizenHomePage() {
-  const { user, getToken } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [stats]         = useState(MOCK_CITIZEN_STATS);
-  const [zone]          = useState(MOCK_CITIZEN_ZONE);
   const [recentReports] = useState(MOCK_RECENT_REPORTS);
   const [notifications] = useState(MOCK_CITIZEN_NOTIFICATIONS);
 
+  // ── Single location state from context ──
   const {
     status: locStatus,
     location: userLocation,
     showPrompt,
     errorMessage: locError,
     requestLocation,
+    refreshLocation,
     retry: retryLocation,
-  } = useUserLocation(getToken);
+  } = useLocation();
 
   const firstName = user?.full_name?.split(" ")[0] ?? "Citizen";
   const greeting  = getGreeting();
@@ -70,9 +72,10 @@ export default function CitizenHomePage() {
       <WelcomeBanner
         name={firstName}
         greeting={greeting}
-        zone={zone}
+        location={userLocation}
         locationSaved={locStatus === "saved"}
         onReport={() => navigate("/citizen/report")}
+        onRequestLocation={requestLocation}
       />
 
       {/* ── Location Status Banner ── */}
@@ -99,8 +102,9 @@ export default function CitizenHomePage() {
             showPrompt={showPrompt}
             onAllow={requestLocation}
             onRetry={retryLocation}
+            onRefresh={refreshLocation}
             accentClass="bg-citizen-500 hover:bg-citizen-400"
-            title="Your current location"
+            title="You are here"
             className="h-56 md:h-64"
           />
         </div>
@@ -123,7 +127,12 @@ export default function CitizenHomePage() {
 
 /* ─────────────────────────────────────────────────────────── */
 
-function WelcomeBanner({ name, greeting, zone, locationSaved, onReport }) {
+function WelcomeBanner({ name, greeting, location, locationSaved, onReport, onRequestLocation }) {
+  // Show real coordinates if available; never show hardcoded zone as real data.
+  const locationLabel = location
+    ? `${location.latitude.toFixed(4)}°N, ${location.longitude.toFixed(4)}°E`
+    : "Current Location";
+
   return (
     <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-citizen-900/60 via-surface-card to-surface-card border border-citizen-500/20 p-6">
       {/* Background glow */}
@@ -139,16 +148,21 @@ function WelcomeBanner({ name, greeting, zone, locationSaved, onReport }) {
           <h1 className="font-display font-bold text-2xl md:text-3xl text-white">
             Welcome, <span className="text-citizen-400">{name}!</span>
           </h1>
-          <div className="flex items-center gap-2 mt-2">
-            <MapPin className="w-3.5 h-3.5 text-gray-400 shrink-0" />
-            <span className="text-gray-400 text-sm">
-              {zone.name} &bull; {zone.municipality}
-            </span>
-          </div>
+          {/* Real location — clickable to refresh */}
+          <button
+            id="citizen-home-location-btn"
+            onClick={onRequestLocation}
+            title="Click to refresh your location"
+            className="flex items-center gap-2 mt-2 cursor-pointer hover:bg-white/5 px-1 py-0.5 -ml-1 rounded-lg transition-colors"
+          >
+            <Navigation className="w-3.5 h-3.5 text-citizen-400 shrink-0" />
+            <span className="text-gray-400 text-sm font-mono">{locationLabel}</span>
+          </button>
           <div className="mt-1">
             <LocationSavedBadge visible={locationSaved} />
           </div>
         </div>
+
 
         <div className="flex flex-col items-start sm:items-end gap-3">
           <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-citizen-500/15 border border-citizen-500/30 text-citizen-400 text-xs font-bold">

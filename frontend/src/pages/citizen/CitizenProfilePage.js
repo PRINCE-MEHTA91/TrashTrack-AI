@@ -1,6 +1,7 @@
 import { useState, useRef } from "react";
-import { User, Mail, Shield, Calendar, CheckCircle2, MapPin, Edit2, Save, Camera, Phone, Home, X } from "lucide-react";
+import { User, Mail, Shield, Calendar, CheckCircle2, MapPin, Edit2, Save, Camera, Phone, Home, X, Navigation } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
+import { useLocation } from "../../context/LocationContext";
 import { CitizenAvatar } from "../../components/citizen/CitizenLayout";
 
 const API_URL = import.meta.env.VITE_API_URL || "https://trashtrack-ai.onrender.com/api/v1";
@@ -16,6 +17,7 @@ function getInitials(name = "") {
 
 export default function CitizenProfilePage() {
   const { user, getToken, refetch } = useAuth();
+  const { displayLabel } = useLocation();
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
@@ -247,6 +249,7 @@ export default function CitizenProfilePage() {
           highlight={isActive}
         />
         <ProfileRow icon={MapPin} label="Municipal Zone" value={user?.municipality_name ?? "—"} note={!user?.municipality_name ? "[To be assigned by admin]" : undefined} />
+        <ProfileRow icon={Navigation} label="Detected Location" value={displayLabel} note={!displayLabel ? "[Enable location to detect]" : undefined} />
         <ProfileRow icon={Calendar} label="Member Since" value={joinedDate} />
       </div>
 

@@ -10,8 +10,8 @@ export function LocationStatus({
   onRetry,
   accentClass = "bg-citizen-500 hover:bg-citizen-400",
 }) {
-  // Invisible if idle or already saved silently
-  if (status === "idle" || status === "saved") return null;
+  // Invisible if idle, already saved silently, or GPS detected (map banner handles it)
+  if (status === "idle" || status === "saved" || status === "detected") return null;
 
   // ── Auto-checking / saving — show inline spinner ──
   if (status === "checking" || status === "saving") {

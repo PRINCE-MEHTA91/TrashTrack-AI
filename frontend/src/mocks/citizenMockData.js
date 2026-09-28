@@ -16,13 +16,6 @@ export const MOCK_CITIZEN_STATS = {
   inProgressReports: 1,
 };
 
-/** TODO: Replace with GET /api/v1/citizen/me/zone */
-export const MOCK_CITIZEN_ZONE = {
-  name: "Ward 7 – Koramangala",
-  municipality: "Bruhat Bengaluru Mahanagara Palike",
-  shortCode: "BBMP-W7",
-};
-
 /** TODO: Replace with GET /api/v1/citizen/me/reports?limit=5 */
 export const MOCK_RECENT_REPORTS = [
   {

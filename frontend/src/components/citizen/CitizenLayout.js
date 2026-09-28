@@ -15,6 +15,7 @@ import {
   MapPin,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
+import { useLocation } from "../../context/LocationContext";
 import { MOCK_UNREAD_NOTIFICATIONS } from "../../mocks/citizenMockData";
 
 const NAV_ITEMS = [
@@ -37,6 +38,7 @@ function getInitials(name = "") {
 
 export default function CitizenLayout() {
   const { user, logout } = useAuth();
+  const { displayLabel, refreshLocation, status: locStatus } = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
@@ -223,13 +225,20 @@ export default function CitizenLayout() {
             <span className="font-display font-bold text-white text-sm">TrashTrack AI</span>
           </div>
 
-          {/* Zone badge */}
-          <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-surface-muted border border-surface-border">
+          {/* Zone badge — clickable to refresh location */}
+          <button
+            id="citizen-header-zone-btn"
+            onClick={refreshLocation}
+            title="Click to refresh your location"
+            className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-surface-muted border border-surface-border hover:border-citizen-500/40 transition-colors cursor-pointer"
+          >
             <MapPin className="w-3.5 h-3.5 text-citizen-400" />
-            <span className="text-xs font-medium text-gray-300">
-              {user?.municipality_name ?? "Municipal Zone"}
+            <span className="text-xs font-medium text-gray-300 max-w-[180px] truncate">
+              {locStatus === "checking" || locStatus === "saving"
+                ? "Detecting…"
+                : displayLabel || "Enable Location"}
             </span>
-          </div>
+          </button>
 
           {/* Spacer */}
           <div className="flex-1" />

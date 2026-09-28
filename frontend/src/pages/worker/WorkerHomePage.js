@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   ClipboardList,
   CheckCircle2,
@@ -13,12 +13,11 @@ import {
   Star,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
-import { useUserLocation } from "../../hooks/useUserLocation";
+import { useLocation } from "../../context/LocationContext";
 import { LocationStatus, LocationSavedBadge } from "../../components/common/LocationStatus";
 import { LocationMap } from "../../components/common/LocationMap";
 import {
   MOCK_WORKER_STATS,
-  MOCK_WORKER_ZONE,
   MOCK_RECENT_ACTIVITY,
   MOCK_ACTIVE_TASK,
 } from "../../mocks/workerMockData";
@@ -37,20 +36,21 @@ const ACTIVITY_ICON = {
 };
 
 export default function WorkerHomePage() {
-  const { user, getToken } = useAuth();
+  const { user } = useAuth();
   const [stats] = useState(MOCK_WORKER_STATS);
-  const [zone] = useState(MOCK_WORKER_ZONE);
   const [activity] = useState(MOCK_RECENT_ACTIVITY);
   const [activeTask] = useState(MOCK_ACTIVE_TASK);
 
+  // ── Single location state from context ──
   const {
     status: locStatus,
     location: userLocation,
     showPrompt,
     errorMessage: locError,
     requestLocation,
+    refreshLocation,
     retry: retryLocation,
-  } = useUserLocation(getToken);
+  } = useLocation();
 
   const firstName = user?.full_name?.split(" ")[0] ?? "Worker";
   const greeting  = getGreeting();
@@ -62,8 +62,9 @@ export default function WorkerHomePage() {
         name={firstName}
         fullName={user?.full_name}
         greeting={greeting}
-        zone={zone}
+        location={userLocation}
         locationSaved={locStatus === "saved"}
+        onRequestLocation={requestLocation}
       />
 
       {/* ── Location Status Banner ── */}
@@ -90,8 +91,9 @@ export default function WorkerHomePage() {
             showPrompt={showPrompt}
             onAllow={requestLocation}
             onRetry={retryLocation}
+            onRefresh={refreshLocation}
             accentClass="bg-primary-500 hover:bg-primary-400"
-            title="Your current location"
+            title="You are here"
             className="h-56 md:h-64"
           />
         </div>
@@ -117,7 +119,11 @@ export default function WorkerHomePage() {
 
 /* ─────────────────────────────────────────────────── */
 
-function WelcomeBanner({ name, fullName, greeting, zone, locationSaved }) {
+function WelcomeBanner({ name, fullName, greeting, location, locationSaved, onRequestLocation }) {
+  const locationLabel = location
+    ? `${location.latitude.toFixed(4)}°N, ${location.longitude.toFixed(4)}°E`
+    : "Current Location";
+
   return (
     <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary-900/60 via-surface-card to-surface-card border border-primary-500/20 p-6">
       {/* Background glow */}
@@ -132,12 +138,15 @@ function WelcomeBanner({ name, fullName, greeting, zone, locationSaved }) {
           <h1 className="font-display font-bold text-2xl md:text-3xl text-white">
             Welcome back, <span className="text-primary-400">{name}!</span>
           </h1>
-          <div className="flex items-center gap-2 mt-2">
-            <MapPin className="w-3.5 h-3.5 text-gray-400 shrink-0" />
-            <span className="text-gray-400 text-sm">
-              {zone.name} &bull; {zone.municipality}
-            </span>
-          </div>
+          <button
+            id="worker-home-location-btn"
+            onClick={onRequestLocation}
+            title="Click to refresh your location"
+            className="flex items-center gap-2 mt-2 cursor-pointer hover:bg-white/5 px-1 py-0.5 -ml-1 rounded-lg transition-colors"
+          >
+            <Navigation className="w-3.5 h-3.5 text-primary-400 shrink-0" />
+            <span className="text-gray-400 text-sm font-mono">{locationLabel}</span>
+          </button>
           <div className="mt-1">
             <LocationSavedBadge visible={locationSaved} />
           </div>
@@ -147,7 +156,6 @@ function WelcomeBanner({ name, fullName, greeting, zone, locationSaved }) {
           <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-400 text-xs font-bold">
             Worker
           </span>
-          <span className="text-xs text-gray-500">{zone.shortCode}</span>
         </div>
       </div>
     </div>

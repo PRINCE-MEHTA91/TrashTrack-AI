@@ -1,5 +1,6 @@
-import { User, Mail, MapPin, Shield, Calendar } from "lucide-react";
+import { User, Mail, MapPin, Shield, Calendar, Navigation } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
+import { useLocation } from "../../context/LocationContext";
 
 function getInitials(name = "") {
   return name
@@ -12,7 +13,11 @@ function getInitials(name = "") {
 
 export default function WorkerProfilePage() {
   const { user } = useAuth();
+  const { displayLabel, address } = useLocation();
   const initials = getInitials(user?.full_name);
+
+  // Build zone label: prefer geocoded address, fallback to coords label, then empty
+  const zoneLabel = displayLabel || null;
 
   const joinedDate = user?.created_at
     ? new Date(user.created_at).toLocaleDateString("en-IN", {
@@ -46,7 +51,7 @@ export default function WorkerProfilePage() {
         <ProfileRow icon={User} label="Full Name" value={user?.full_name} />
         <ProfileRow icon={Mail} label="Email" value={user?.email} />
         <ProfileRow icon={Shield} label="Role" value="Worker" highlight />
-        <ProfileRow icon={MapPin} label="Zone" value="Ward 14 – Andheri West" note="[TODO: from API]" />
+        <ProfileRow icon={MapPin} label="Zone / Location" value={zoneLabel} note={!zoneLabel ? "[Enable location to detect]" : undefined} />
         <ProfileRow icon={Calendar} label="Joined" value={joinedDate} />
       </div>
 

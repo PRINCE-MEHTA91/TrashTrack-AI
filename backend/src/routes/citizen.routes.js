@@ -9,7 +9,7 @@ const router = Router();
 router.use(verifyToken);
 router.use(requireRole(["citizen"]));
 
-/** GET /api/v1/citizen/stats – citizen's own report statistics */
+// Get citizen's own report statistics
 router.get("/stats", getCitizenStats);
 
 export default router;

@@ -22,14 +22,14 @@ import {
   MOCK_ACTIVE_TASK,
 } from "../../mocks/workerMockData";
 
-/** ─── Priority badge colours ─── */
+// Priority badge colours
 const PRIORITY_CONFIG = {
   HIGH:   { label: "High",   className: "bg-red-500/15 text-red-400 border-red-500/30" },
   MEDIUM: { label: "Medium", className: "bg-amber-500/15 text-amber-400 border-amber-500/30" },
   LOW:    { label: "Low",    className: "bg-primary-500/15 text-primary-400 border-primary-500/30" },
 };
 
-/** ─── Activity type icons ─── */
+// Activity type icons
 const ACTIVITY_ICON = {
   completed: { Icon: CheckCircle2, color: "text-primary-400" },
   assigned:  { Icon: ClipboardList, color: "text-amber-400" },
@@ -41,7 +41,7 @@ export default function WorkerHomePage() {
   const [activity] = useState(MOCK_RECENT_ACTIVITY);
   const [activeTask] = useState(MOCK_ACTIVE_TASK);
 
-  // ── Single location state from context ──
+  // Single location state from context
   const {
     status: locStatus,
     location: userLocation,
@@ -57,7 +57,7 @@ export default function WorkerHomePage() {
 
   return (
     <div className="p-4 md:p-6 pb-24 lg:pb-6 space-y-6 max-w-5xl mx-auto">
-      {/* ── Welcome Banner ── */}
+      {/* Welcome Banner */}
       <WelcomeBanner
         name={firstName}
         fullName={user?.full_name}
@@ -67,7 +67,7 @@ export default function WorkerHomePage() {
         onRequestLocation={requestLocation}
       />
 
-      {/* ── Location Status Banner ── */}
+      {/* Location Status Banner */}
       <LocationStatus
         status={locStatus}
         errorMessage={locError}
@@ -77,7 +77,7 @@ export default function WorkerHomePage() {
         accentClass="bg-primary-500 hover:bg-primary-400"
       />
 
-      {/* ── Location Map ── */}
+      {/* Location Map */}
       <div id="worker-location-map" className="card overflow-hidden">
         <div className="flex items-center gap-2 px-5 pt-5 pb-3">
           <MapPin className="w-4 h-4 text-primary-400" />
@@ -99,25 +99,25 @@ export default function WorkerHomePage() {
         </div>
       </div>
 
-      {/* ── Stats Row ── */}
+      {/* Stats Row */}
       <StatsRow stats={stats} />
 
-      {/* ── Active Task Card ── */}
+      {/* Active Task Card */}
       <ActiveTaskCard task={activeTask} />
 
-      {/* ── Quick Actions + Recent Activity ── */}
+      {/* Quick Actions and Recent Activity */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <QuickActions />
         <RecentActivity activity={activity} />
       </div>
 
-      {/* ── Performance Summary ── */}
+      {/* Performance Summary */}
       <PerformanceSummary stats={stats} />
     </div>
   );
 }
 
-/* ─────────────────────────────────────────────────── */
+// ---------------------------------------------------
 
 function WelcomeBanner({ name, fullName, greeting, location, locationSaved, onRequestLocation }) {
   const locationLabel = location

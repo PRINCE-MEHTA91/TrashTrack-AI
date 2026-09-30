@@ -59,7 +59,7 @@ export default function CitizenHomePage() {
   const [notifications] = useState(MOCK_CITIZEN_NOTIFICATIONS);
   const [loading, setLoading] = useState(true);
 
-  // ── Single location state from context ──
+  // Single location state from context
   const {
     status: locStatus,
     location: userLocation,
@@ -113,7 +113,7 @@ export default function CitizenHomePage() {
 
   return (
     <div className="p-4 md:p-6 pb-28 lg:pb-6 space-y-6 max-w-5xl mx-auto">
-      {/* ── Welcome Banner ── */}
+      {/* Welcome Banner */}
       <WelcomeBanner
         name={firstName}
         greeting={greeting}
@@ -123,7 +123,7 @@ export default function CitizenHomePage() {
         onRequestLocation={requestLocation}
       />
 
-      {/* ── Location Status Banner ── */}
+      {/* Location Status Banner */}
       <LocationStatus
         status={locStatus}
         errorMessage={locError}
@@ -133,7 +133,7 @@ export default function CitizenHomePage() {
         accentClass="bg-citizen-500 hover:bg-citizen-400"
       />
 
-      {/* ── Location Map ── */}
+      {/* Location Map */}
       <div id="citizen-location-map" className="card overflow-hidden">
         <div className="flex items-center gap-2 px-5 pt-5 pb-3">
           <MapPin className="w-4 h-4 text-citizen-400" />
@@ -155,13 +155,13 @@ export default function CitizenHomePage() {
         </div>
       </div>
 
-      {/* ── Stats Row ── */}
+      {/* Stats Row */}
       <StatsRow stats={stats} />
 
-      {/* ── Report Waste CTA (mobile-prominent) ── */}
+      {/* Report Waste CTA */}
       <ReportWasteCTA onReport={() => navigate("/citizen/report")} />
 
-      {/* ── Recent Reports + Notification Preview ── */}
+      {/* Recent Reports and Notification Preview */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <RecentReports reports={recentReports} onViewAll={() => navigate("/citizen/complaints")} />
         <NotificationPreview notifications={notifications} onViewAll={() => navigate("/citizen/notifications")} />
@@ -170,7 +170,7 @@ export default function CitizenHomePage() {
   );
 }
 
-/* ─────────────────────────────────────────────────────────── */
+// -----------------------------------------------------------
 
 function WelcomeBanner({ name, greeting, location, locationSaved, onReport, onRequestLocation }) {
   // Show real coordinates if available; never show hardcoded zone as real data.

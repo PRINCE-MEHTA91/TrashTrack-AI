@@ -1,16 +1,7 @@
 import { query } from "../config/database.js";
 
-/**
- * GET /api/v1/citizen/stats
- * Returns the authenticated citizen's report summary stats.
- *
- * Role protection is enforced upstream by verifyToken + requireRole(['citizen']).
- * Never trusts any role/userId value from the request body or query string.
- *
- * Note: The complaints table does not exist yet.
- * This controller returns safe zeros until the table is created.
- * Replace the zero-stub block with the real query once the complaints table is ready.
- */
+// Returns the authenticated citizen's report summary stats.
+// Returns zeros until the complaints table is ready.
 export const getCitizenStats = async (req, res, next) => {
   try {
     const citizenId = req.user.userId;

@@ -1,7 +1,8 @@
 import jwt from "jsonwebtoken";
 import { query } from "../config/database.js";
 
-/** verifyToken – JWT authentication middleware. * Reads the Bearer token from the Authorization header, verifies it with JWT_SECRET, and fetches the user from PostgreSQL. Verifies that the user still exists and their role matches the JWT. Attaches { userId, role } to req.user. * Returns: 401 – no token supplied / invalid / expired 403 – user not found or role mismatch */
+// JWT authentication middleware.
+// Verifies token, user existence, and role.
 export const verifyToken = async (req, res, next) => {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
@@ -44,7 +45,8 @@ export const verifyToken = async (req, res, next) => {
   }
 };
 
-/** requireRole – role-based authorization middleware factory. * Usage: requireRole(['admin', 'worker']) Roles are stored in lowercase in PostgreSQL and in the JWT payload. The check is case-insensitive to tolerate minor casing differences. * Returns 403 Forbidden if the authenticated user's role is not in the list. */
+// Role-based authorization middleware factory.
+// Returns 403 Forbidden if user's role is not in the list.
 export const requireRole = (roles) => {
   const normalizedRoles = roles.map((r) => r.toLowerCase());
   return (req, res, next) => {

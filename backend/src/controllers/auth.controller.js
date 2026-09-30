@@ -2,7 +2,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { z } from "zod";
 import { query } from "../config/database.js";
-/** Generate a JWT for the given user. Payload contains ONLY userId and role — never email, phone, or password data. Uses JWT_SECRET and JWT_EXPIRES_IN from environment variables. * @param {{ id: string, role: string }} user @returns {string} signed JWT */
+// Generate a JWT for the given user containing userId and role.
 const generateToken = (user) => {
   return jwt.sign(
     { userId: user.id, role: user.role },
@@ -11,7 +11,7 @@ const generateToken = (user) => {
   );
 };
 
-/** Safe user fields to return in API responses. password_hash is explicitly excluded. */
+// Safe user fields to return in API responses. password_hash is excluded.
 const SAFE_USER_FIELDS = `
   id,
   full_name,
@@ -37,7 +37,7 @@ const loginSchema = z.object({
   password: z.string().min(1),
   role: z.enum(["citizen", "worker", "admin"]),
 });
-/** POST /api/v1/auth/signup Email + password registration. Creates a CITIZEN account. */
+// Email + password registration for CITIZEN account.
 export const signup = async (req, res, next) => {
   try {
     const parsed = signupSchema.parse(req.body);
@@ -82,7 +82,7 @@ export const signup = async (req, res, next) => {
   }
 };
 
-/** POST /api/v1/auth/login Email + password login. Verifies bcrypt hash and issues a JWT. */
+// Email + password login. Verifies hash and issues a JWT.
 export const login = async (req, res, next) => {
   try {
     const parsed = loginSchema.parse(req.body);
@@ -137,7 +137,7 @@ export const login = async (req, res, next) => {
   }
 };
 
-/** GET /api/v1/auth/me Protected route. Returns the currently authenticated user's PostgreSQL data. Requires verifyToken middleware — req.user.userId is set by the middleware. Never returns password_hash. */
+// Get current authenticated user data.
 export const getMe = async (req, res, next) => {
   try {
     const result = await query(
@@ -160,7 +160,7 @@ export const getMe = async (req, res, next) => {
   }
 };
 
-/** PUT /api/v1/auth/me Update user profile */
+// Update user profile
 export const updateMe = async (req, res, next) => {
   try {
     const { full_name, profile_image, address } = req.body;

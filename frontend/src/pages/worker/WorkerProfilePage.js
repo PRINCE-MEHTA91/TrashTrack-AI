@@ -16,7 +16,7 @@ export default function WorkerProfilePage() {
   const { displayLabel, address } = useLocation();
   const initials = getInitials(user?.full_name);
 
-  // Build zone label: prefer geocoded address, fallback to coords label, then empty
+  // Determine zone label
   const zoneLabel = displayLabel || null;
 
   const joinedDate = user?.created_at

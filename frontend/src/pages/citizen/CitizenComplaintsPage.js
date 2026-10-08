@@ -2,8 +2,7 @@ import { useState, useEffect } from "react";
 import { FileText, Plus, CheckCircle2, Clock, MapPin, Loader2, Calendar } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
-
-const API_URL = import.meta.env.VITE_API_URL || "https://trashtrack-ai.onrender.com/api/v1";
+import { API_URL } from "../../config/api.js";
 
 const STATUS_CONFIG = {
   SUBMITTED:   { label: "Submitted",   className: "bg-gray-500/15 text-gray-400 border-gray-500/30",          icon: FileText },

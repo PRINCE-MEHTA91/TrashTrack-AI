@@ -20,7 +20,8 @@ import {
 } from "../components/auth/FormField";
 import { useAuth } from "../context/AuthContext";
 
-const API_URL = import.meta.env.VITE_API_URL || "https://trashtrack-ai.onrender.com/api/v1";
+import { API_URL } from "../config/api.js";
+
 function validate(form) {
   const errors = {};
 

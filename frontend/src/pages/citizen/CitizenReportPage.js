@@ -14,7 +14,7 @@ import {
 import { useAuth } from "../../context/AuthContext";
 import { useLocation } from "../../context/LocationContext";
 
-const API_URL = import.meta.env.VITE_API_URL || "https://trashtrack-ai.onrender.com/api/v1";
+import { API_URL } from "../../config/api.js";
 
 // camStatus values: idle | requesting | active | denied | unavailable
 

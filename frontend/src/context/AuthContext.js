@@ -1,8 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
+import { API_URL } from "../config/api.js";
 
 const AuthContext = createContext(null);
-
-const API_URL = import.meta.env.VITE_API_URL || "https://trashtrack-ai.onrender.com/api/v1";
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);

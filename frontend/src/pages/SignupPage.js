@@ -21,7 +21,7 @@ import {
   OrDivider,
   GoogleButton,
 } from "../components/auth/FormField";
-const API_URL = import.meta.env.VITE_API_URL || "https://trashtrack-ai.onrender.com/api/v1";
+import { API_URL } from "../config/api.js";
 
 function getPasswordStrength(pw) {
   if (!pw) return { score: 0, label: "", color: "" };

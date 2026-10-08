@@ -13,7 +13,7 @@ L.Icon.Default.mergeOptions({
   shadowUrl:     "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
 });
 
-const API_URL = import.meta.env.VITE_API_URL || "https://trashtrack-ai.onrender.com/api/v1";
+import { API_URL } from "../../config/api.js";
 
 const STATUS_COLORS = {
   SUBMITTED:   "#64748b", // gray-500

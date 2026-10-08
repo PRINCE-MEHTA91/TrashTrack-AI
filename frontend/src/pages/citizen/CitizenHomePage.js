@@ -23,7 +23,7 @@ import {
   MOCK_CITIZEN_NOTIFICATIONS,
 } from "../../mocks/citizenMockData";
 
-const API_URL = import.meta.env.VITE_API_URL || "https://trashtrack-ai.onrender.com/api/v1";
+import { API_URL } from "../../config/api.js";
 
 const STATUS_CONFIG = {
   RESOLVED:    { label: "Resolved",    className: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30", icon: CheckCircle2 },

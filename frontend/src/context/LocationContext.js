@@ -23,8 +23,7 @@ import {
 } from "react";
 import { useAuth } from "./AuthContext";
 
-const API_URL =
-  import.meta.env.VITE_API_URL || "https://trashtrack-ai.onrender.com/api/v1";
+import { API_URL } from "../config/api.js";
 
 /** POST /api/v1/location — JWT verified server-side; userId NEVER from body. */
 async function saveLocationToBackend(coords, token) {

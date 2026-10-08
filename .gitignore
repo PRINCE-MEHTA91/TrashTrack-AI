@@ -5,6 +5,7 @@
 .env
 .env.*
 !.env.example
+!.env.production
 
 # OS
 .DS_Store

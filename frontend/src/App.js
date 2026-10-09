@@ -24,6 +24,11 @@ import CitizenProfilePage from "./pages/citizen/CitizenProfilePage";
 // ── Admin ────────────────────────────────────────────────────
 import AdminLayout from "./components/admin/AdminLayout";
 import AdminHomePage from "./pages/admin/AdminHomePage";
+import AdminComplaintsPage from "./pages/admin/AdminComplaintsPage";
+import AdminWorkforcePage from "./pages/admin/AdminWorkforcePage";
+import AdminMunicipalPage from "./pages/admin/AdminMunicipalPage";
+import AdminReportsPage from "./pages/admin/AdminReportsPage";
+import AdminSettingsPage from "./pages/admin/AdminSettingsPage";
 
 function App() {
   return (
@@ -78,7 +83,12 @@ function App() {
           </ProtectedRoute>
         }
       >
-        <Route path="/admin/home" element={<AdminHomePage />} />
+        <Route path="/admin/home"       element={<AdminHomePage />} />
+        <Route path="/admin/complaints" element={<AdminComplaintsPage />} />
+        <Route path="/admin/workforce"  element={<AdminWorkforcePage />} />
+        <Route path="/admin/municipal"  element={<AdminMunicipalPage />} />
+        <Route path="/admin/reports"    element={<AdminReportsPage />} />
+        <Route path="/admin/settings"   element={<AdminSettingsPage />} />
       </Route>
 
       {/* ── Fallback: redirect unknown routes to login ── */}

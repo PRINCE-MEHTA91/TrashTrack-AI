@@ -26,10 +26,11 @@ const SAFE_USER_FIELDS = `
   updated_at
 `;
 const signupSchema = z.object({
-  fullName: z.string().min(2),
-  email: z.string().email(),
-  password: z.string().min(6),
-  role: z.enum(["citizen", "worker", "admin"]),
+  fullName:    z.string().min(2),
+  email:       z.string().email(),
+  password:    z.string().min(6),
+  role:        z.enum(["citizen", "worker", "admin"]),
+  adminSecret: z.string().optional(),
 });
 
 const loginSchema = z.object({
@@ -42,9 +43,15 @@ export const signup = async (req, res, next) => {
   try {
     const parsed = signupSchema.parse(req.body);
 
-    // Prevent privilege escalation — public signup cannot be admin
+    // Admin accounts require a secret key to prevent privilege escalation
     if (parsed.role === "admin") {
-      return res.status(403).json({ success: false, message: "Public signup is not allowed for ADMIN role." });
+      const requiredSecret = process.env.ADMIN_SIGNUP_SECRET;
+      if (!requiredSecret || parsed.adminSecret !== requiredSecret) {
+        return res.status(403).json({
+          success: false,
+          message: "Invalid or missing admin secret key. Contact your system administrator.",
+        });
+      }
     }
 
     // Check duplicate email + role

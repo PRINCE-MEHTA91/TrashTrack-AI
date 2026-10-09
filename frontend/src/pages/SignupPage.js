@@ -13,6 +13,7 @@ import {
   CheckCircle2,
   Building2,
   Smartphone,
+  Key,
 } from "lucide-react";
 import AuthLayout from "../components/auth/AuthLayout";
 import {
@@ -127,6 +128,7 @@ export default function SignupPage() {
     password: "",
     confirmPassword: "",
     role: "",
+    adminSecret: "",
     agreeTerms: false,
   });
   const [errors, setErrors] = useState({});
@@ -190,7 +192,13 @@ export default function SignupPage() {
       const res = await fetch(`${API_URL}/auth/signup`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fullName: form.fullName, email: form.email, password: form.password, role: form.role }),
+        body: JSON.stringify({
+          fullName: form.fullName,
+          email: form.email,
+          password: form.password,
+          role: form.role,
+          ...(form.role === "admin" && { adminSecret: form.adminSecret }),
+        }),
       });
       const data = await res.json();
       
@@ -427,6 +435,29 @@ export default function SignupPage() {
                 <ErrorIcon />
                 {errors.role}
               </p>
+            )}
+            {/* Admin secret key field — only shown when admin role is selected */}
+            {form.role === "admin" && (
+              <div className="mt-2 space-y-1">
+                <label className="block text-xs font-semibold text-blue-300 uppercase tracking-wide">
+                  Admin Secret Key
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none">
+                    <Key className="w-4 h-4" />
+                  </span>
+                  <input
+                    id="signup-admin-secret"
+                    type="password"
+                    value={form.adminSecret}
+                    onChange={e => setForm(p => ({ ...p, adminSecret: e.target.value }))}
+                    placeholder="Enter the admin secret key"
+                    disabled={isLoading}
+                    className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white/5 border border-blue-500/40 text-white placeholder-gray-500 text-sm focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400/40"
+                  />
+                </div>
+                <p className="text-[10px] text-gray-500">Required to create an admin account. Obtain this from your system administrator.</p>
+              </div>
             )}
           </div>
           <div className="space-y-1">

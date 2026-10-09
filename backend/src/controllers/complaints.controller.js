@@ -18,11 +18,28 @@ export const createComplaint = async (req, res, next) => {
     const parsed = complaintSchema.parse(req.body);
     const citizenId = req.user.userId;
 
+    // Use PostGIS to find the containing municipality and ward
+    const point = `ST_SetSRID(ST_MakePoint(${parsed.longitude}, ${parsed.latitude}), 4326)`;
+    
+    const spatialResult = await query(`
+      SELECT 
+        m.id as municipality_id,
+        w.id as ward_id
+      FROM municipalities m
+      LEFT JOIN wards w ON w.municipality_id = m.id AND ST_Contains(w.boundary, ${point})
+      WHERE ST_Contains(m.boundary, ${point})
+      LIMIT 1
+    `);
+    
+    const muniId = spatialResult.rows.length > 0 ? spatialResult.rows[0].municipality_id : null;
+    const wardId = spatialResult.rows.length > 0 ? spatialResult.rows[0].ward_id : null;
+
     const result = await query(
       `INSERT INTO complaints (
         citizen_id, title, description, waste_type, severity, 
-        latitude, longitude, accuracy, address, image_url
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        latitude, longitude, accuracy, address, image_url,
+        municipality_id, ward_id
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
       RETURNING *`,
       [
         citizenId,
@@ -35,6 +52,8 @@ export const createComplaint = async (req, res, next) => {
         parsed.accuracy,
         parsed.address,
         parsed.image_url,
+        muniId,
+        wardId
       ]
     );
 

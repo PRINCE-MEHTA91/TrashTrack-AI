@@ -10,6 +10,7 @@ import {
   Zap,
   ArrowRight,
   Loader2,
+  MapPin
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
@@ -53,27 +54,34 @@ export default function AdminHomePage() {
   const { user, getToken } = useAuth();
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [muni, setMuni] = useState(null);
 
   useEffect(() => {
-    async function fetchStats() {
+    async function fetchData() {
       try {
         const token = getToken();
         if (!token) return;
-        // Try fetching any available admin stats; gracefully handle 404/403
-        const res = await fetch(`${API_URL}/citizen/stats`, {
+        
+        // Fetch stats
+        fetch(`${API_URL}/citizen/stats`, {
           headers: { Authorization: `Bearer ${token}` },
-        });
-        if (res.ok) {
-          const data = await res.json();
-          setStats(data);
-        }
+        }).then(res => res.ok ? res.json() : null)
+          .then(data => data && setStats(data))
+          .catch(() => {});
+          
+        // Fetch municipality
+        fetch(`${API_URL}/municipalities/my`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }).then(res => res.ok ? res.json() : null)
+          .then(data => data?.municipality && setMuni(data.municipality))
+          .catch(() => {});
+          
       } catch (e) {
-        // Silently ignore — stats not critical
       } finally {
         setLoading(false);
       }
     }
-    fetchStats();
+    fetchData();
   }, [getToken]);
 
   const cards = [
@@ -127,7 +135,14 @@ export default function AdminHomePage() {
           <h1 id="admin-overview-title" className="font-display font-bold text-2xl md:text-3xl text-white">
             {user?.full_name ?? "Administrator"} 👋
           </h1>
-          <p className="text-gray-400 text-sm mt-1">Here's what's happening across your municipality today.</p>
+          {muni ? (
+             <p className="text-gray-400 text-sm mt-1 flex items-center gap-1.5">
+               <MapPin className="w-4 h-4 text-primary-400" />
+               Managing <span className="font-medium text-white">{muni.name}</span>, {muni.state}
+             </p>
+          ) : (
+             <p className="text-gray-400 text-sm mt-1">Here's what's happening across your municipality today.</p>
+          )}
         </div>
         <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-surface-card border border-surface-border">
           <Zap className="w-3.5 h-3.5 text-primary-400" />

@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { API_URL } from "../../config/api.js";
+import MunicipalAreaSetup from "../../components/admin/MunicipalAreaSetup";
 
 const TABS = [
   { id: "profile",       label: "My Profile",               icon: User },
@@ -240,37 +241,7 @@ function NotificationsTab() {
 }
 
 function MunicipalTab() {
-  return (
-    <div className="space-y-6 max-w-2xl">
-      <div className="card p-6 space-y-4">
-        <h2 className="font-display font-semibold text-white text-base flex items-center gap-2">
-          <Building2 className="w-4 h-4 text-primary-400" />
-          Municipal Configuration
-        </h2>
-        <div className="space-y-3">
-          {[
-            { label: "Municipality Name",   value: "—",            note: "Set via backend admin config" },
-            { label: "Number of Zones/Wards", value: "—",          note: "Configured in zone management" },
-            { label: "Collection Schedule", value: "Daily",        note: "Default schedule" },
-            { label: "Auto-Assignment",     value: "Disabled",     note: "Manual assignment mode" },
-          ].map(row => (
-            <div key={row.label} className="flex items-center justify-between p-4 rounded-xl bg-surface-muted border border-surface-border">
-              <div>
-                <p className="text-sm text-white font-medium">{row.label}</p>
-                <p className="text-xs text-gray-500 mt-0.5">{row.note}</p>
-              </div>
-              <span className="text-sm text-gray-400">{row.value}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-      <div className="rounded-xl border border-surface-border bg-surface-card px-5 py-4">
-        <p className="text-xs text-gray-400">
-          <span className="text-gray-300 font-semibold">Municipal Configuration</span> — Full configuration panel (zone management, schedules, auto-assignment rules) will be available once the admin configuration API is implemented.
-        </p>
-      </div>
-    </div>
-  );
+  return <MunicipalAreaSetup />;
 }
 
 export default function AdminSettingsPage() {

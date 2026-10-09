@@ -14,8 +14,10 @@ import {
   Bell,
   Trash2,
   Building2,
+  MapPin,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
+import { API_URL } from "../../config/api.js";
 
 // ── Navigation structure ──────────────────────────────────────
 const NAV_GROUPS = [
@@ -253,13 +255,33 @@ function SidebarContent({ onClose }) {
 }
 
 export default function AdminLayout() {
-  const { user, logout } = useAuth();
+  const { user, logout, getToken } = useAuth();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [muniName, setMuniName] = useState("");
   const profileRef = useRef(null);
 
   const initials = getInitials(user?.full_name);
+
+  useEffect(() => {
+    async function fetchMuni() {
+      try {
+        const token = getToken();
+        if (!token) return;
+        const res = await fetch(`${API_URL}/municipalities/my`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data?.municipality?.name) {
+            setMuniName(data.municipality.name);
+          }
+        }
+      } catch (err) {}
+    }
+    fetchMuni();
+  }, [getToken]);
 
   useEffect(() => {
     function handleClick(e) {
@@ -327,6 +349,12 @@ export default function AdminLayout() {
               <Building2 className="w-3 h-3" />
               Admin Console
             </span>
+            {muniName && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-surface-muted border border-surface-border text-gray-300 text-xs font-medium">
+                <MapPin className="w-3 h-3 text-gray-400" />
+                {muniName}
+              </span>
+            )}
           </div>
 
           <div className="flex-1" />

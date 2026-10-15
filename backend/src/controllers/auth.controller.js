@@ -22,15 +22,22 @@ const SAFE_USER_FIELDS = `
   address,
   is_email_verified,
   status,
+  municipality_id,
+  requested_municipality_id,
   created_at,
   updated_at
 `;
 const signupSchema = z.object({
-  fullName:    z.string().min(2),
-  email:       z.string().email(),
-  password:    z.string().min(6),
-  role:        z.enum(["citizen", "worker", "admin"]),
-  adminSecret: z.string().optional(),
+  fullName:                z.string().min(2),
+  email:                   z.string().email(),
+  password:                z.string().min(6),
+  role:                    z.enum(["citizen", "worker", "admin"]),
+  adminSecret:             z.string().optional(),
+  phoneNumber:             z.string().optional(),
+  phone_number:            z.string().optional(),
+  address:                 z.string().optional(),
+  municipalityId:          z.string().uuid().optional().nullable(),
+  requestedMunicipalityId: z.string().uuid().optional().nullable(),
 });
 
 const loginSchema = z.object({
@@ -38,7 +45,8 @@ const loginSchema = z.object({
   password: z.string().min(1),
   role: z.enum(["citizen", "worker", "admin"]),
 });
-// Email + password registration for CITIZEN account.
+
+// Registration endpoint.
 export const signup = async (req, res, next) => {
   try {
     const parsed = signupSchema.parse(req.body);
@@ -68,18 +76,43 @@ export const signup = async (req, res, next) => {
     const salt = await bcrypt.genSalt(10);
     const passwordHash = await bcrypt.hash(parsed.password, salt);
 
+    const phoneNumber = (parsed.phoneNumber || parsed.phone_number || "").trim() || null;
+    const address = (parsed.address || "").trim() || null;
+    const requestedMunicipalityId = parsed.requestedMunicipalityId || parsed.municipalityId || null;
+    const initialStatus = parsed.role === "worker" ? "pending_verification" : "active";
+
+    await query("BEGIN");
+
     const result = await query(
-      `INSERT INTO users (full_name, email, password_hash, role)
-       VALUES ($1, $2, $3, $4)
+      `INSERT INTO users (full_name, email, password_hash, role, phone_number, address, requested_municipality_id, status)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
        RETURNING ${SAFE_USER_FIELDS}`,
-      [parsed.fullName, parsed.email, passwordHash, parsed.role]
+      [parsed.fullName, parsed.email, passwordHash, parsed.role, phoneNumber, address, requestedMunicipalityId, initialStatus]
     );
 
     const user = result.rows[0];
+
+    // When a worker registers, create a PENDING_VERIFICATION request in PostgreSQL
+    if (parsed.role === "worker") {
+      await query(
+        `INSERT INTO worker_approvals (worker_id, requested_municipality_id, status)
+         VALUES ($1, $2, 'PENDING_VERIFICATION')
+         ON CONFLICT (worker_id)
+         DO UPDATE SET requested_municipality_id = EXCLUDED.requested_municipality_id,
+                       status = 'PENDING_VERIFICATION',
+                       rejection_reason = NULL,
+                       requested_at = CURRENT_TIMESTAMP`,
+        [user.id, requestedMunicipalityId]
+      );
+    }
+
+    await query("COMMIT");
+
     const token = generateToken(user);
 
     return res.status(201).json({ success: true, token, user });
   } catch (err) {
+    try { await query("ROLLBACK"); } catch (_) {}
     if (err instanceof z.ZodError) {
       return res
         .status(400)
@@ -97,7 +130,7 @@ export const login = async (req, res, next) => {
     // Fetch all users with this email
     const result = await query(
       `SELECT id, password_hash, role, full_name, email, profile_image, phone_number, address,
-              is_email_verified, status, created_at, updated_at
+              is_email_verified, status, municipality_id, requested_municipality_id, created_at, updated_at
        FROM users
        WHERE email = $1`,
       [parsed.email]
@@ -149,7 +182,7 @@ export const getMe = async (req, res, next) => {
   try {
     const result = await query(
       `SELECT id, full_name, email, role, profile_image, phone_number, address,
-              is_email_verified, status, created_at, updated_at
+              is_email_verified, status, municipality_id, requested_municipality_id, created_at, updated_at
        FROM users
        WHERE id = $1`,
       [req.user.userId]

@@ -4,11 +4,13 @@ import {
   searchOSM,
   discoverWards,
   setupMunicipality,
-  getMyMunicipality
+  getMyMunicipality,
+  listMunicipalities
 } from "../controllers/municipalities.controller.js";
 
 const router = Router();
 
+router.get("/", listMunicipalities); // List municipalities
 router.get("/search", verifyToken, requireRole(["admin"]), searchOSM);
 router.get("/discover-wards", verifyToken, requireRole(["admin"]), discoverWards);
 router.post("/", verifyToken, requireRole(["admin"]), setupMunicipality);

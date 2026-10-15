@@ -55,6 +55,7 @@ export default function AdminHomePage() {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [muni, setMuni] = useState(null);
+  const [pendingWorkerCount, setPendingWorkerCount] = useState(0);
 
   useEffect(() => {
     async function fetchData() {
@@ -74,6 +75,13 @@ export default function AdminHomePage() {
           headers: { Authorization: `Bearer ${token}` },
         }).then(res => res.ok ? res.json() : null)
           .then(data => data?.municipality && setMuni(data.municipality))
+          .catch(() => {});
+
+        // Fetch pending worker approvals count
+        fetch(`${API_URL}/admin/workers/pending-count`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }).then(res => res.ok ? res.json() : null)
+          .then(data => typeof data?.count === "number" && setPendingWorkerCount(data.count))
           .catch(() => {});
           
       } catch (e) {
@@ -175,17 +183,25 @@ export default function AdminHomePage() {
           Quick Actions
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {quickLinks.map((link) => (
-            <NavLink
-              key={link.to}
-              to={link.to}
-              className="flex items-center gap-3 px-4 py-3 rounded-xl bg-surface-muted hover:bg-surface-border border border-surface-border hover:border-primary-500/30 transition-all duration-200 group"
-            >
-              <link.icon className={`w-4.5 h-4.5 shrink-0 ${link.color}`} />
-              <span className="text-sm text-gray-300 group-hover:text-white font-medium flex-1">{link.label}</span>
-              <ArrowRight className="w-4 h-4 text-gray-600 group-hover:text-gray-400 transition-colors" />
-            </NavLink>
-          ))}
+          {quickLinks.map((link) => {
+            const isApprovals = link.to.includes("approvals");
+            return (
+              <NavLink
+                key={link.to}
+                to={link.to}
+                className="flex items-center gap-3 px-4 py-3 rounded-xl bg-surface-muted hover:bg-surface-border border border-surface-border hover:border-primary-500/30 transition-all duration-200 group"
+              >
+                <link.icon className={`w-4.5 h-4.5 shrink-0 ${link.color}`} />
+                <span className="text-sm text-gray-300 group-hover:text-white font-medium flex-1">{link.label}</span>
+                {isApprovals && pendingWorkerCount > 0 && (
+                  <span className="px-2 py-0.5 rounded-full bg-amber-500/20 border border-amber-500/30 text-amber-400 text-xs font-bold">
+                    {pendingWorkerCount} pending
+                  </span>
+                )}
+                <ArrowRight className="w-4 h-4 text-gray-600 group-hover:text-gray-400 transition-colors" />
+              </NavLink>
+            );
+          })}
         </div>
       </div>
 

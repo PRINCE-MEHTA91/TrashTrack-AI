@@ -203,3 +203,27 @@ export const getMyMunicipality = async (req, res) => {
     return res.status(500).json({ success: false, message: "Failed to get municipality info" });
   }
 };
+
+// List all registered municipalities for registration and area filtering
+export const listMunicipalities = async (req, res) => {
+  try {
+    const q = `
+      SELECT 
+        m.id, 
+        m.name, 
+        m.district, 
+        m.state, 
+        m.is_verified,
+        (SELECT COUNT(*)::int FROM wards w WHERE w.municipality_id = m.id) as ward_count,
+        (SELECT COUNT(*)::int FROM users u WHERE u.role = 'worker' AND u.municipality_id = m.id) as worker_count,
+        EXISTS(SELECT 1 FROM users adm WHERE adm.role = 'admin' AND adm.municipality_id = m.id) as has_admin
+      FROM municipalities m
+      ORDER BY m.name ASC
+    `;
+    const result = await query(q);
+    return res.json({ success: true, municipalities: result.rows });
+  } catch (error) {
+    console.error("List Municipalities Error:", error);
+    return res.status(500).json({ success: false, message: "Failed to list municipalities" });
+  }
+};

@@ -15,6 +15,7 @@ import {
   Trash2,
   Building2,
   MapPin,
+  AlertTriangle,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { API_URL } from "../../config/api.js";
@@ -112,7 +113,7 @@ function Avatar({ initials, size = "sm" }) {
   );
 }
 
-function NavGroup({ group, onClose }) {
+function NavGroup({ group, onClose, pendingCount }) {
   const routerLocation = useRouterLocation();
   const isGroupActive = routerLocation.pathname.startsWith(group.to);
   const [expanded, setExpanded] = useState(isGroupActive);
@@ -142,6 +143,8 @@ function NavGroup({ group, onClose }) {
     );
   }
 
+  const isWorkforce = group.id === "workforce";
+
   return (
     <div>
       {/* Group header button */}
@@ -155,6 +158,14 @@ function NavGroup({ group, onClose }) {
       >
         <group.icon className="w-4.5 h-4.5 shrink-0" />
         <span className="flex-1 text-left">{group.label}</span>
+        {isWorkforce && pendingCount > 0 && (
+          <span
+            id="admin-sidebar-workforce-count"
+            className="px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-400 text-[10px] font-bold border border-amber-500/30 mr-1"
+          >
+            {pendingCount}
+          </span>
+        )}
         <ChevronDown
           className={`w-3.5 h-3.5 transition-transform duration-200 ${
             expanded ? "rotate-180" : ""
@@ -173,6 +184,8 @@ function NavGroup({ group, onClose }) {
               routerLocation.pathname === basePath &&
               (params ? routerLocation.search === `?${params}` : !routerLocation.search || routerLocation.search === "");
 
+            const isPendingApprovals = child.to.includes("tab=approvals");
+
             return (
               <NavLink
                 key={child.to}
@@ -185,7 +198,15 @@ function NavGroup({ group, onClose }) {
                 }`}
               >
                 <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isChildActive ? "bg-primary-400" : "bg-gray-600"}`} />
-                {child.label}
+                <span className="flex-1 truncate">{child.label}</span>
+                {isPendingApprovals && pendingCount > 0 && (
+                  <span
+                    id="admin-sidebar-approvals-child-count"
+                    className="ml-auto px-1.5 py-0.2 rounded-full bg-amber-500/25 text-amber-400 text-[10px] font-bold border border-amber-500/35"
+                  >
+                    {pendingCount}
+                  </span>
+                )}
               </NavLink>
             );
           })}
@@ -195,7 +216,7 @@ function NavGroup({ group, onClose }) {
   );
 }
 
-function SidebarContent({ onClose }) {
+function SidebarContent({ onClose, pendingCount = 0 }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const initials = getInitials(user?.full_name);
@@ -229,7 +250,12 @@ function SidebarContent({ onClose }) {
       {/* Navigation */}
       <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
         {NAV_GROUPS.map((group) => (
-          <NavGroup key={group.id} group={group} onClose={onClose} />
+          <NavGroup
+            key={group.id}
+            group={group}
+            onClose={onClose}
+            pendingCount={pendingCount}
+          />
         ))}
       </nav>
 
@@ -260,10 +286,12 @@ export default function AdminLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [muniName, setMuniName] = useState("");
+  const [pendingCount, setPendingCount] = useState(0);
   const profileRef = useRef(null);
 
   const initials = getInitials(user?.full_name);
 
+  // Fetch Admin's assigned municipality
   useEffect(() => {
     async function fetchMuni() {
       try {
@@ -281,6 +309,34 @@ export default function AdminLayout() {
       } catch (err) {}
     }
     fetchMuni();
+  }, [getToken]);
+
+  // Fetch pending worker approvals count and listen for real-time refresh events
+  useEffect(() => {
+    let isMounted = true;
+    async function fetchPendingCount() {
+      try {
+        const token = getToken();
+        if (!token) return;
+        const res = await fetch(`${API_URL}/admin/workers/pending-count`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.ok && isMounted) {
+          const data = await res.json();
+          setPendingCount(data.count || 0);
+        }
+      } catch (err) {}
+    }
+    fetchPendingCount();
+
+    function handleWorkforceUpdate() {
+      fetchPendingCount();
+    }
+    window.addEventListener("tt:workforce-updated", handleWorkforceUpdate);
+    return () => {
+      isMounted = false;
+      window.removeEventListener("tt:workforce-updated", handleWorkforceUpdate);
+    };
   }, [getToken]);
 
   useEffect(() => {
@@ -302,7 +358,7 @@ export default function AdminLayout() {
     <div className="min-h-screen bg-surface flex">
       {/* ── Desktop Sidebar ── */}
       <aside className="hidden lg:flex flex-col w-64 bg-surface-card border-r border-surface-border shrink-0 fixed inset-y-0 left-0 z-30">
-        <SidebarContent />
+        <SidebarContent pendingCount={pendingCount} />
       </aside>
 
       {/* ── Mobile Overlay ── */}
@@ -319,13 +375,13 @@ export default function AdminLayout() {
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <SidebarContent onClose={() => setSidebarOpen(false)} />
+        <SidebarContent onClose={() => setSidebarOpen(false)} pendingCount={pendingCount} />
       </aside>
 
       {/* ── Main content area ── */}
       <div className="flex-1 flex flex-col lg:pl-64 min-w-0">
         {/* ── Top Header ── */}
-        <header className="sticky top-0 z-20 bg-surface-card/80 backdrop-blur-md border-b border-surface-border h-16 flex items-center px-4 md:px-6 gap-4">
+        <header className="sticky top-0 z-20 bg-surface-card/80 backdrop-blur-md border-b border-surface-border h-16 flex items-center px-4 md:px-6 gap-3 md:gap-4">
           {/* Mobile menu button */}
           <button
             onClick={() => setSidebarOpen(true)}
@@ -358,6 +414,20 @@ export default function AdminLayout() {
           </div>
 
           <div className="flex-1" />
+
+          {/* Pending Approvals Header Badge */}
+          {pendingCount > 0 && (
+            <NavLink
+              to="/admin/workforce?tab=approvals"
+              id="admin-header-pending-approvals-pill"
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 md:px-3 md:py-1.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-400 hover:bg-amber-500/25 transition-all text-xs font-semibold shadow-glow-sm"
+              title={`${pendingCount} worker registration${pendingCount > 1 ? "s" : ""} pending approval`}
+            >
+              <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+              <span className="hidden sm:inline">{pendingCount} Pending Approvals</span>
+              <span className="sm:hidden">{pendingCount} Pending</span>
+            </NavLink>
+          )}
 
           {/* Notifications */}
           <button

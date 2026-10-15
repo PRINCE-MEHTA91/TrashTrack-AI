@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Link } from "react-router-dom";
 import {
   User,
@@ -56,6 +56,11 @@ function validate(form) {
   else if (form.confirmPassword !== form.password)
     errors.confirmPassword = "Passwords do not match.";
   if (!form.role) errors.role = "Please select your role.";
+  if (form.role === "worker" && form.phoneNumber && form.phoneNumber.trim() !== "") {
+    if (!/^\d{10}$/.test(form.phoneNumber.trim())) {
+      errors.phoneNumber = "Phone number must be exactly 10 digits.";
+    }
+  }
   if (!form.agreeTerms) errors.agreeTerms = "You must agree to continue.";
   return errors;
 }
@@ -129,13 +134,26 @@ export default function SignupPage() {
     confirmPassword: "",
     role: "",
     adminSecret: "",
+    phoneNumber: "",
+    address: "",
+    requestedMunicipalityId: "",
     agreeTerms: false,
   });
+  const [municipalities, setMunicipalities] = useState([]);
   const [errors, setErrors] = useState({});
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [touched, setTouched] = useState({});
+
+  useEffect(() => {
+    fetch(`${API_URL}/municipalities`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.municipalities) setMunicipalities(data.municipalities);
+      })
+      .catch(() => {});
+  }, []);
 
   const pwStrength = getPasswordStrength(form.password);
 
@@ -198,6 +216,11 @@ export default function SignupPage() {
           password: form.password,
           role: form.role,
           ...(form.role === "admin" && { adminSecret: form.adminSecret }),
+          ...(form.role === "worker" && {
+            phoneNumber: form.phoneNumber,
+            address: form.address,
+            requestedMunicipalityId: form.requestedMunicipalityId || null,
+          }),
         }),
       });
       const data = await res.json();
@@ -457,6 +480,83 @@ export default function SignupPage() {
                   />
                 </div>
                 <p className="text-[10px] text-gray-500">Required to create an admin account. Obtain this from your system administrator.</p>
+              </div>
+            )}
+            {/* Worker contact & zone request fields — only shown when worker role is selected */}
+            {form.role === "worker" && (
+              <div className="mt-2.5 p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/25 space-y-2.5 animate-slide-down">
+                <div className="flex items-center gap-1.5 text-amber-300">
+                  <HardHat className="w-4 h-4" />
+                  <span className="text-xs font-semibold tracking-wide">
+                    Worker Verification Details
+                  </span>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="block text-[11px] font-medium text-gray-300">
+                    Contact Phone Number (Required)
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
+                      <Smartphone className="w-3.5 h-3.5" />
+                    </span>
+                    <input
+                      id="signup-worker-phone"
+                      type="tel"
+                      placeholder="10-digit mobile number"
+                      value={form.phoneNumber}
+                      onChange={(e) => setForm((p) => ({ ...p, phoneNumber: e.target.value }))}
+                      disabled={isLoading}
+                      className="w-full pl-9 pr-3 py-2 rounded-lg bg-surface-card border border-surface-border text-white placeholder-gray-500 text-xs focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400/40"
+                    />
+                  </div>
+                  {errors.phoneNumber && (
+                    <p className="text-[10px] text-red-400">{errors.phoneNumber}</p>
+                  )}
+                </div>
+
+                <div className="space-y-1">
+                  <label className="block text-[11px] font-medium text-gray-300">
+                    Requested Municipality / Area
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
+                      <Building2 className="w-3.5 h-3.5" />
+                    </span>
+                    <select
+                      id="signup-worker-municipality"
+                      value={form.requestedMunicipalityId}
+                      onChange={(e) => setForm((p) => ({ ...p, requestedMunicipalityId: e.target.value }))}
+                      disabled={isLoading}
+                      className="w-full pl-9 pr-3 py-2 rounded-lg bg-surface-card border border-surface-border text-white text-xs focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400/40"
+                    >
+                      <option value="">Select Municipality (or Unassigned)</option>
+                      {municipalities.map((m) => (
+                        <option key={m.id} value={m.id}>
+                          {m.name}, {m.district} ({m.state})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <p className="text-[10px] text-gray-400">
+                    Your request will be routed directly to this zone's administrator for review.
+                  </p>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="block text-[11px] font-medium text-gray-300">
+                    Residential / Base Address
+                  </label>
+                  <input
+                    id="signup-worker-address"
+                    type="text"
+                    placeholder="e.g. Ward 4, Station Road"
+                    value={form.address}
+                    onChange={(e) => setForm((p) => ({ ...p, address: e.target.value }))}
+                    disabled={isLoading}
+                    className="w-full px-3 py-2 rounded-lg bg-surface-card border border-surface-border text-white placeholder-gray-500 text-xs focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400/40"
+                  />
+                </div>
               </div>
             )}
           </div>

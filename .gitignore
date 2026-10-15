@@ -33,16 +33,39 @@ pnpm-debug.log*
 /dist/
 /build/
 
-# Logs
+# Logs & Debug
 *.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
 
-# Unusual files
+# Coverage & Caches
+coverage/
+.cache/
+.turbo/
+*.tsbuildinfo
+
+# Sensitive Keys & Certs
+*.pem
+*.key
+*.cert
+*.p12
+*.pfx
+
+# Agent & AI Skill Runtime
+.agents/
+skills-lock.json
+
+# Local Databases & Portable Runtimes
 postgres-portable/
+
+# Backend One-off, Scratch & Migration Runner Scripts
 remove-comments-deep.mjs
-backend/alter.js
-backend/apply-schema.mjs
+backend/alter*.js
+backend/apply-*.mjs
 backend/init-db.mjs
-backend/migrate-location.mjs
-backend/test-auth.mjs
-backend/test-role.mjs
-backend/migrations/
+backend/migrate-*.mjs
+backend/test-*.mjs
+backend/test-*.js
+

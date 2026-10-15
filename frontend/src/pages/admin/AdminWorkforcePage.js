@@ -21,12 +21,14 @@ import {
   Eye,
   Building2,
   Search,
+  Filter,
   ShieldCheck,
   ShieldAlert,
   Info,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { API_URL } from "../../config/api.js";
+import AdminWorkerAvailabilityTable from "../../components/admin/AdminWorkerAvailabilityTable";
 
 const TABS = [
   { id: "all",          label: "All Workers",       icon: Users },
@@ -132,6 +134,9 @@ export default function AdminWorkforcePage() {
       if (res.ok) {
         const data = await res.json();
         setWorkers(data.workers || []);
+        if (data.admin_municipality) {
+          setAdminMuni(data.admin_municipality);
+        }
       } else {
         const data = await res.json().catch(() => ({}));
         setError(data.message || "Could not fetch workforce list.");
@@ -277,8 +282,15 @@ export default function AdminWorkforcePage() {
     );
   });
 
-  const filteredAll = workers.filter(w => {
-    if (statusFilter !== "all" && w.status !== statusFilter) return false;
+  const filteredAll = workers.filter((w) => {
+    const isWorkerActive = w.status === "active" && w.verification_status !== "REJECTED" && w.verification_status !== "PENDING_VERIFICATION";
+    const isWorkerRejected = w.status === "rejected" || w.verification_status === "REJECTED";
+    const isWorkerPending = !isWorkerActive && !isWorkerRejected;
+
+    if (statusFilter === "active" && !isWorkerActive) return false;
+    if (statusFilter === "pending_verification" && !isWorkerPending) return false;
+    if (statusFilter === "rejected" && !isWorkerRejected) return false;
+
     if (!searchQuery.trim()) return true;
     const q = searchQuery.toLowerCase();
     return (
@@ -287,6 +299,7 @@ export default function AdminWorkforcePage() {
       w.phone_number?.toLowerCase().includes(q) ||
       w.municipality_name?.toLowerCase().includes(q) ||
       w.requested_municipality_name?.toLowerCase().includes(q) ||
+      w.assigned_area?.toLowerCase().includes(q) ||
       w.address?.toLowerCase().includes(q)
     );
   });
@@ -429,7 +442,7 @@ export default function AdminWorkforcePage() {
 
       {/* ── Main Tab Content ── */}
       {activeTab === "availability" ? (
-        <ComingSoonSection label="Worker Availability Schedule" />
+        <AdminWorkerAvailabilityTable />
       ) : activeTab === "workload" ? (
         <ComingSoonSection label="Workload & Shift Distribution" />
       ) : activeTab === "performance" ? (
@@ -629,7 +642,7 @@ export default function AdminWorkforcePage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {filteredAll.map((w) => {
                 const initials = getInitials(w.full_name);
-                const isActive = w.status === "active";
+                const isActive = w.status === "active" && w.verification_status !== "REJECTED" && w.verification_status !== "PENDING_VERIFICATION";
                 const isRejected = w.status === "rejected" || w.verification_status === "REJECTED";
                 const isPending = !isActive && !isRejected;
 
@@ -796,7 +809,10 @@ export default function AdminWorkforcePage() {
                 <span className="text-gray-500 block">Requested / Assigned Area</span>
                 <span className="text-white font-medium flex items-center gap-1">
                   <Building2 className="w-3.5 h-3.5 text-primary-400" />
-                  {detailWorker.requested_area?.name ||
+                  {detailWorker.assigned_area ||
+                    (typeof detailWorker.requested_area === "object"
+                      ? detailWorker.requested_area?.name
+                      : detailWorker.requested_area) ||
                     detailWorker.municipality_name ||
                     detailWorker.requested_municipality_name ||
                     "Needs Assignment"}

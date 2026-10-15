@@ -8,6 +8,11 @@ import {
   approveWorker,
   rejectWorker,
 } from "../controllers/workers.controller.js";
+import {
+  getLiveWorkerAvailability,
+  getWorkerWorkingHours,
+  adminCloseWorkerSession,
+} from "../controllers/worker-availability.controller.js";
 
 const router = Router();
 
@@ -15,14 +20,21 @@ const router = Router();
 router.use(verifyToken);
 router.use(requireRole(["admin"]));
 
+// Worker live availability & monitoring
+router.get("/availability/live", getLiveWorkerAvailability);
+
 // Worker verification and approvals
 router.get("/pending-count", getPendingApprovalsCount);
 router.get("/pending", getPendingApprovals);
-router.get("/:id", getWorkerDetail);
-router.post("/:id/approve", approveWorker);
-router.post("/:id/reject", rejectWorker);
 
 // Workforce listing
 router.get("/", listWorkers);
+
+// Worker-specific working hours & detail
+router.get("/:id/working-hours", getWorkerWorkingHours);
+router.post("/:id/close-session", adminCloseWorkerSession);
+router.get("/:id", getWorkerDetail);
+router.post("/:id/approve", approveWorker);
+router.post("/:id/reject", rejectWorker);
 
 export default router;

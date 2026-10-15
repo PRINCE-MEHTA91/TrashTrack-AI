@@ -17,6 +17,7 @@ import {
 import { useAuth } from "../../context/AuthContext";
 import { useLocation } from "../../context/LocationContext";
 import { MOCK_UNREAD_NOTIFICATIONS } from "../../mocks/workerMockData";
+import WorkerAvailabilityToggle from "./WorkerAvailabilityToggle";
 
 const NAV_ITEMS = [
   { to: "/worker/home", icon: Home, label: "Home" },
@@ -225,6 +226,9 @@ export default function WorkerLayout() {
 
           {/* Spacer */}
           <div className="flex-1" />
+
+          {/* Worker Daily Availability Toggle & Status Indicator */}
+          <WorkerAvailabilityToggle />
 
           {/* Notifications */}
           <button

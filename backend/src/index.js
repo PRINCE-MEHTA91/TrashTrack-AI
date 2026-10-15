@@ -7,6 +7,7 @@ import locationRoutes from "./routes/location.routes.js";
 import complaintsRoutes from "./routes/complaints.routes.js";
 import municipalitiesRoutes from "./routes/municipalities.routes.js";
 import workersRoutes from "./routes/workers.routes.js";
+import workerDutyRoutes from "./routes/worker-duty.routes.js";
 import { errorHandler } from "./middleware/error.middleware.js";
 import { query } from "./config/database.js";
 
@@ -48,6 +49,7 @@ app.use("/api/v1/location", locationRoutes);
 app.use("/api/v1/complaints", complaintsRoutes);
 app.use("/api/v1/municipalities", municipalitiesRoutes);
 app.use("/api/v1/admin/workers", workersRoutes);
+app.use("/api/v1/worker", workerDutyRoutes);
 
 // Error handling middleware should be last
 app.use(errorHandler);
@@ -64,3 +66,5 @@ app.listen(PORT, '0.0.0.0', async () => {
     console.error("Database connection failed ❌:", err.message);
   }
 });
+
+

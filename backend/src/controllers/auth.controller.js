@@ -129,10 +129,13 @@ export const login = async (req, res, next) => {
 
     // Fetch all users with this email
     const result = await query(
-      `SELECT id, password_hash, role, full_name, email, profile_image, phone_number, address,
-              is_email_verified, status, municipality_id, requested_municipality_id, created_at, updated_at
-       FROM users
-       WHERE email = $1`,
+      `SELECT u.id, u.password_hash, u.role, u.full_name, u.email, u.profile_image, u.phone_number, u.address,
+              u.is_email_verified, u.status, u.municipality_id, u.requested_municipality_id, u.created_at, u.updated_at,
+              COALESCE(wa.status, CASE WHEN u.status = 'active' THEN 'APPROVED' ELSE 'PENDING_VERIFICATION' END) as verification_status,
+              wa.rejection_reason
+       FROM users u
+       LEFT JOIN worker_approvals wa ON wa.worker_id = u.id
+       WHERE u.email = $1`,
       [parsed.email]
     );
 
@@ -181,10 +184,13 @@ export const login = async (req, res, next) => {
 export const getMe = async (req, res, next) => {
   try {
     const result = await query(
-      `SELECT id, full_name, email, role, profile_image, phone_number, address,
-              is_email_verified, status, municipality_id, requested_municipality_id, created_at, updated_at
-       FROM users
-       WHERE id = $1`,
+      `SELECT u.id, u.full_name, u.email, u.role, u.profile_image, u.phone_number, u.address,
+              u.is_email_verified, u.status, u.municipality_id, u.requested_municipality_id, u.created_at, u.updated_at,
+              COALESCE(wa.status, CASE WHEN u.status = 'active' THEN 'APPROVED' ELSE 'PENDING_VERIFICATION' END) as verification_status,
+              wa.rejection_reason
+       FROM users u
+       LEFT JOIN worker_approvals wa ON wa.worker_id = u.id
+       WHERE u.id = $1`,
       [req.user.userId]
     );
 

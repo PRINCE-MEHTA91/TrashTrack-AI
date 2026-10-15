@@ -275,7 +275,7 @@ export const listWorkers = async (req, res, next) => {
       LEFT JOIN worker_approvals wa ON wa.worker_id = u.id
       LEFT JOIN municipalities m ON m.id = u.municipality_id
       LEFT JOIN municipalities rm ON rm.id = COALESCE(wa.requested_municipality_id, u.requested_municipality_id)
-      WHERE u.role = 'worker'
+      WHERE LOWER(u.role) = 'worker'
     `;
 
     const conditions = [];
@@ -284,7 +284,7 @@ export const listWorkers = async (req, res, next) => {
     // Filter by admin municipality scope if admin has one configured
     if (adminMuniId) {
       params.push(adminMuniId);
-      conditions.push(`(u.municipality_id = $${params.length} OR wa.requested_municipality_id = $${params.length} OR (u.municipality_id IS NULL AND wa.requested_municipality_id IS NULL))`);
+      conditions.push(`(u.municipality_id = $${params.length} OR COALESCE(wa.requested_municipality_id, u.requested_municipality_id) = $${params.length} OR (u.municipality_id IS NULL AND COALESCE(wa.requested_municipality_id, u.requested_municipality_id) IS NULL))`);
     }
 
     // Tab / status filters
@@ -314,7 +314,19 @@ export const listWorkers = async (req, res, next) => {
         : null,
     }));
 
-    return res.json({ success: true, count: workers.length, workers });
+    return res.json({
+      success: true,
+      count: workers.length,
+      admin_municipality: admin.municipality_id
+        ? {
+            id: admin.municipality_id,
+            name: admin.municipality_name,
+            district: admin.municipality_district,
+            state: admin.municipality_state,
+          }
+        : null,
+      workers,
+    });
   } catch (err) {
     next(err);
   }

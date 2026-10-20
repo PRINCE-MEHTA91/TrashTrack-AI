@@ -8,6 +8,7 @@ import complaintsRoutes from "./routes/complaints.routes.js";
 import municipalitiesRoutes from "./routes/municipalities.routes.js";
 import workersRoutes from "./routes/workers.routes.js";
 import workerDutyRoutes from "./routes/worker-duty.routes.js";
+import workerTasksRoutes from "./routes/worker-tasks.routes.js";
 import adminDashboardRoutes from "./routes/admin-dashboard.routes.js";
 import { errorHandler } from "./middleware/error.middleware.js";
 import { query } from "./config/database.js";
@@ -51,6 +52,7 @@ app.use("/api/v1/complaints", complaintsRoutes);
 app.use("/api/v1/municipalities", municipalitiesRoutes);
 app.use("/api/v1/admin/workers", workersRoutes);
 app.use("/api/v1/admin/dashboard", adminDashboardRoutes);
+app.use("/api/v1/worker/tasks", workerTasksRoutes);
 app.use("/api/v1/worker", workerDutyRoutes);
 
 // Error handling middleware should be last

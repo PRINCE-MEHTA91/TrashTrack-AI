@@ -7,6 +7,7 @@ import {
   getWorkerDetail,
   approveWorker,
   rejectWorker,
+  assignComplaintToWorker,
 } from "../controllers/workers.controller.js";
 import {
   getLiveWorkerAvailability,
@@ -36,5 +37,7 @@ router.post("/:id/close-session", adminCloseWorkerSession);
 router.get("/:id", getWorkerDetail);
 router.post("/:id/approve", approveWorker);
 router.post("/:id/reject", rejectWorker);
+router.post("/:id/assign-complaint", assignComplaintToWorker);
 
 export default router;
+

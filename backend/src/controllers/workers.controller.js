@@ -606,3 +606,68 @@ export const rejectWorker = async (req, res, next) => {
     next(err);
   }
 };
+
+/**
+ * POST /api/v1/admin/workers/:id/assign-complaint
+ * Assigns a complaint/task to a verified worker.
+ */
+export const assignComplaintToWorker = async (req, res, next) => {
+  try {
+    const admin = await getAuthenticatedAdmin(req.user.userId);
+    if (!admin) {
+      return res.status(403).json({ success: false, message: "Forbidden: Admin access required." });
+    }
+
+    const { id: workerId } = req.params;
+    const { complaintId } = req.body;
+
+    if (!complaintId) {
+      return res.status(400).json({ success: false, message: "complaintId is required." });
+    }
+
+    // Verify worker exists and is active
+    const workerRes = await query(
+      `SELECT id, full_name, email, role, status, municipality_id FROM users WHERE id = $1 AND role = 'worker'`,
+      [workerId]
+    );
+    if (workerRes.rows.length === 0) {
+      return res.status(404).json({ success: false, message: "Worker not found." });
+    }
+    const worker = workerRes.rows[0];
+
+    // Verify complaint exists
+    const complaintRes = await query(
+      `SELECT id, title, status, municipality_id FROM complaints WHERE id = $1`,
+      [complaintId]
+    );
+    if (complaintRes.rows.length === 0) {
+      return res.status(404).json({ success: false, message: "Complaint not found." });
+    }
+    const complaint = complaintRes.rows[0];
+
+    if (["RESOLVED", "COMPLETED", "CLOSED", "REJECTED"].includes(complaint.status)) {
+      return res.status(400).json({ success: false, message: "Cannot assign a resolved or closed complaint." });
+    }
+
+    // Update assignment
+    const updated = await query(
+      `UPDATE complaints
+       SET assigned_worker_id = $1,
+           status = 'PENDING',
+           assigned_at = CURRENT_TIMESTAMP,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = $2
+       RETURNING *`,
+      [workerId, complaintId]
+    );
+
+    return res.json({
+      success: true,
+      message: `Task assigned to ${worker.full_name} successfully.`,
+      complaint: updated.rows[0],
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+

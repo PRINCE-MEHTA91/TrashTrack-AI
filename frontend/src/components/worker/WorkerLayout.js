@@ -16,16 +16,8 @@ import {
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useLocation } from "../../context/LocationContext";
-// Notification badge will be driven by real API — mock removed
+import { API_URL } from "../../config/api.js";
 import WorkerAvailabilityToggle from "./WorkerAvailabilityToggle";
-
-const NAV_ITEMS = [
-  { to: "/worker/home", icon: Home, label: "Home" },
-  { to: "/worker/tasks", icon: ClipboardList, label: "Tasks" },
-  { to: "/worker/map", icon: Map, label: "Map" },
-  { to: "/worker/notifications", icon: Bell, label: "Notifications", badge: 0 },
-  { to: "/worker/profile", icon: User, label: "Profile" },
-];
 
 function getInitials(name = "") {
   return name
@@ -37,12 +29,45 @@ function getInitials(name = "") {
 }
 
 export default function WorkerLayout() {
-  const { user, logout } = useAuth();
+  const { user, logout, getToken } = useAuth();
   const { displayLabel, refreshLocation, status: locStatus } = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [activeTaskCount, setActiveTaskCount] = useState(0);
   const profileRef = useRef(null);
+
+  useEffect(() => {
+    const token = getToken();
+    if (!token) return;
+
+    const fetchSummary = () => {
+      fetch(`${API_URL}/worker/tasks/summary`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (data?.counts) {
+            // Show pending + in_progress as active actionable tasks count
+            setActiveTaskCount((data.counts.pending || 0) + (data.counts.in_progress || 0));
+          }
+        })
+        .catch(() => {});
+    };
+
+    fetchSummary();
+    window.addEventListener("task-status-updated", fetchSummary);
+    return () => window.removeEventListener("task-status-updated", fetchSummary);
+  }, [getToken]);
+
+  const navItems = [
+    { to: "/worker/home", icon: Home, label: "Home" },
+    { to: "/worker/tasks", icon: ClipboardList, label: "Tasks", badge: activeTaskCount },
+    { to: "/worker/map", icon: Map, label: "Map" },
+    { to: "/worker/notifications", icon: Bell, label: "Notifications", badge: 0 },
+    { to: "/worker/profile", icon: User, label: "Profile" },
+  ];
+
 
   const initials = getInitials(user?.full_name);
 
@@ -78,7 +103,7 @@ export default function WorkerLayout() {
 
         {/* Nav */}
         <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-          {NAV_ITEMS.map(({ to, icon: Icon, label, badge }) => (
+          {navItems.map(({ to, icon: Icon, label, badge }) => (
             <NavLink
               key={to}
               to={to}
@@ -153,7 +178,7 @@ export default function WorkerLayout() {
         </div>
 
         <nav className="px-3 py-4 space-y-1">
-          {NAV_ITEMS.map(({ to, icon: Icon, label, badge }) => (
+          {navItems.map(({ to, icon: Icon, label, badge }) => (
             <NavLink
               key={to}
               to={to}
@@ -315,7 +340,7 @@ export default function WorkerLayout() {
         {/* ── Mobile Bottom Navigation ── */}
         <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-20 bg-surface-card/95 backdrop-blur-md border-t border-surface-border px-2 pb-safe">
           <div className="flex items-center justify-around py-2">
-            {NAV_ITEMS.map(({ to, icon: Icon, label, badge }) => (
+            {navItems.map(({ to, icon: Icon, label, badge }) => (
               <NavLink
                 key={to}
                 to={to}

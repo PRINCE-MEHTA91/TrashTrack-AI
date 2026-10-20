@@ -62,35 +62,43 @@ export default function AdminHomePage() {
       try {
         const token = getToken();
         if (!token) return;
-        
-        // Fetch stats
-        fetch(`${API_URL}/citizen/stats`, {
+
+        // ── Admin dashboard summary (complaint counts, user totals, worker stats) ──
+        // This is a dedicated admin endpoint filtered by the admin's own municipality.
+        // DO NOT use /citizen/stats here — that is a citizen-only route (403 for admins).
+        fetch(`${API_URL}/admin/dashboard/summary`, {
           headers: { Authorization: `Bearer ${token}` },
-        }).then(res => res.ok ? res.json() : null)
-          .then(data => data && setStats(data))
-          .catch(() => {});
-          
-        // Fetch municipality
-        fetch(`${API_URL}/municipalities/my`, {
-          headers: { Authorization: `Bearer ${token}` },
-        }).then(res => res.ok ? res.json() : null)
-          .then(data => data?.municipality && setMuni(data.municipality))
+        })
+          .then((res) => (res.ok ? res.json() : null))
+          .then((data) => {
+            if (data && data.success) setStats(data);
+          })
           .catch(() => {});
 
-        // Fetch pending worker approvals count
+        // ── Municipality info ──
+        fetch(`${API_URL}/municipalities/my`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+          .then((res) => (res.ok ? res.json() : null))
+          .then((data) => data?.municipality && setMuni(data.municipality))
+          .catch(() => {});
+
+        // ── Pending worker approvals count ──
         fetch(`${API_URL}/admin/workers/pending-count`, {
           headers: { Authorization: `Bearer ${token}` },
-        }).then(res => res.ok ? res.json() : null)
-          .then(data => typeof data?.count === "number" && setPendingWorkerCount(data.count))
+        })
+          .then((res) => (res.ok ? res.json() : null))
+          .then((data) => typeof data?.count === "number" && setPendingWorkerCount(data.count))
           .catch(() => {});
-          
       } catch (e) {
+        // Silently fail — individual fetch calls handle their own errors
       } finally {
         setLoading(false);
       }
     }
     fetchData();
   }, [getToken]);
+
 
   const cards = [
     {

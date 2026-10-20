@@ -16,14 +16,14 @@ import {
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useLocation } from "../../context/LocationContext";
-import { MOCK_UNREAD_NOTIFICATIONS } from "../../mocks/workerMockData";
+// Notification badge will be driven by real API — mock removed
 import WorkerAvailabilityToggle from "./WorkerAvailabilityToggle";
 
 const NAV_ITEMS = [
   { to: "/worker/home", icon: Home, label: "Home" },
   { to: "/worker/tasks", icon: ClipboardList, label: "Tasks" },
   { to: "/worker/map", icon: Map, label: "Map" },
-  { to: "/worker/notifications", icon: Bell, label: "Notifications", badge: MOCK_UNREAD_NOTIFICATIONS },
+  { to: "/worker/notifications", icon: Bell, label: "Notifications", badge: 0 },
   { to: "/worker/profile", icon: User, label: "Profile" },
 ];
 
@@ -238,9 +238,9 @@ export default function WorkerLayout() {
             onClick={() => navigate("/worker/notifications")}
           >
             <Bell className="w-5 h-5" />
-            {MOCK_UNREAD_NOTIFICATIONS > 0 && (
+            {false && (
               <span className="absolute top-1 right-1 w-4 h-4 rounded-full bg-primary-500 text-white text-xs flex items-center justify-center font-bold leading-none">
-                {MOCK_UNREAD_NOTIFICATIONS > 9 ? "9+" : MOCK_UNREAD_NOTIFICATIONS}
+                {0}
               </span>
             )}
           </button>

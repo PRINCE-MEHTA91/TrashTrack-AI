@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   ClipboardList,
   CheckCircle2,
@@ -9,18 +9,14 @@ import {
   MapPin,
   Zap,
   TrendingUp,
-  Play,
   Star,
+  Loader2,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useLocation } from "../../context/LocationContext";
 import { LocationStatus, LocationSavedBadge } from "../../components/common/LocationStatus";
 import { LocationMap } from "../../components/common/LocationMap";
-import {
-  MOCK_WORKER_STATS,
-  MOCK_RECENT_ACTIVITY,
-  MOCK_ACTIVE_TASK,
-} from "../../mocks/workerMockData";
+import { API_URL } from "../../config/api.js";
 
 // Priority badge colours
 const PRIORITY_CONFIG = {
@@ -29,19 +25,12 @@ const PRIORITY_CONFIG = {
   LOW:    { label: "Low",    className: "bg-primary-500/15 text-primary-400 border-primary-500/30" },
 };
 
-// Activity type icons
-const ACTIVITY_ICON = {
-  completed: { Icon: CheckCircle2, color: "text-primary-400" },
-  assigned:  { Icon: ClipboardList, color: "text-amber-400" },
-};
-
 export default function WorkerHomePage() {
-  const { user } = useAuth();
-  const [stats] = useState(MOCK_WORKER_STATS);
-  const [activity] = useState(MOCK_RECENT_ACTIVITY);
-  const [activeTask] = useState(MOCK_ACTIVE_TASK);
+  const { user, getToken } = useAuth();
+  const [dashData, setDashData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // Single location state from context
   const {
     status: locStatus,
     location: userLocation,
@@ -52,22 +41,51 @@ export default function WorkerHomePage() {
     retry: retryLocation,
   } = useLocation();
 
+  const fetchDashboard = useCallback(async () => {
+    setLoading(true);
+    try {
+      const token = getToken();
+      if (!token) { setLoading(false); return; }
+      const res = await fetch(`${API_URL}/worker/availability`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.message || "Failed to load worker dashboard.");
+      }
+      const json = await res.json();
+      setDashData(json);
+      setError(null);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [getToken]);
+
+  useEffect(() => { fetchDashboard(); }, [fetchDashboard]);
+
   const firstName = user?.full_name?.split(" ")[0] ?? "Worker";
   const greeting  = getGreeting();
 
+  const stats = dashData ? {
+    isActive:      dashData.is_active ?? false,
+    todaySessions: dashData.today_summary?.session_count ?? 0,
+    todayDuration: dashData.today_summary?.total_formatted ?? "0 mins",
+    verStatus:     dashData.verification_status ?? "—",
+  } : null;
+
   return (
     <div className="p-4 md:p-6 pb-24 lg:pb-6 space-y-6 max-w-5xl mx-auto">
-      {/* Welcome Banner */}
       <WelcomeBanner
         name={firstName}
-        fullName={user?.full_name}
         greeting={greeting}
         location={userLocation}
         locationSaved={locStatus === "saved"}
         onRequestLocation={requestLocation}
+        isActive={stats?.isActive}
       />
 
-      {/* Location Status Banner */}
       <LocationStatus
         status={locStatus}
         errorMessage={locError}
@@ -77,7 +95,6 @@ export default function WorkerHomePage() {
         accentClass="bg-primary-500 hover:bg-primary-400"
       />
 
-      {/* Location Map */}
       <div id="worker-location-map" className="card overflow-hidden">
         <div className="flex items-center gap-2 px-5 pt-5 pb-3">
           <MapPin className="w-4 h-4 text-primary-400" />
@@ -99,36 +116,49 @@ export default function WorkerHomePage() {
         </div>
       </div>
 
-      {/* Stats Row */}
-      <StatsRow stats={stats} />
+      {loading && (
+        <div className="card p-8 flex items-center justify-center gap-3">
+          <Loader2 className="w-6 h-6 text-primary-400 animate-spin" />
+          <span className="text-gray-400 text-sm">Loading your dashboard…</span>
+        </div>
+      )}
 
-      {/* Active Task Card */}
-      <ActiveTaskCard task={activeTask} />
+      {!loading && error && (
+        <div className="card p-5 border border-red-500/30 bg-red-500/10 flex items-center gap-3">
+          <AlertTriangle className="w-5 h-5 text-red-400 shrink-0" />
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-red-300">Unable to load dashboard</p>
+            <p className="text-xs text-red-400 mt-0.5">{error}</p>
+          </div>
+          <button
+            onClick={fetchDashboard}
+            className="text-xs text-primary-400 hover:text-primary-300 font-medium border border-primary-500/30 px-3 py-1.5 rounded-lg"
+          >
+            Retry
+          </button>
+        </div>
+      )}
 
-      {/* Quick Actions and Recent Activity */}
+      {!loading && !error && stats && <DutyStatsRow stats={stats} dashData={dashData} />}
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <QuickActions />
-        <RecentActivity activity={activity} />
+        <AvailabilitySummary dashData={dashData} loading={loading} />
       </div>
 
-      {/* Performance Summary */}
-      <PerformanceSummary stats={stats} />
+      {!loading && !error && dashData && <AvailabilityDetails dashData={dashData} />}
     </div>
   );
 }
 
-// ---------------------------------------------------
-
-function WelcomeBanner({ name, fullName, greeting, location, locationSaved, onRequestLocation }) {
+function WelcomeBanner({ name, greeting, location, locationSaved, onRequestLocation, isActive }) {
   const locationLabel = location
     ? `${location.latitude.toFixed(4)}°N, ${location.longitude.toFixed(4)}°E`
     : "Current Location";
 
   return (
     <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary-900/60 via-surface-card to-surface-card border border-primary-500/20 p-6">
-      {/* Background glow */}
       <div className="absolute -top-10 -right-10 w-48 h-48 rounded-full bg-primary-500/10 blur-3xl pointer-events-none" />
-
       <div className="relative flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <p className="text-primary-400 text-sm font-semibold mb-1 flex items-center gap-1.5">
@@ -147,54 +177,64 @@ function WelcomeBanner({ name, fullName, greeting, location, locationSaved, onRe
             <Navigation className="w-3.5 h-3.5 text-primary-400 shrink-0" />
             <span className="text-gray-400 text-sm font-mono">{locationLabel}</span>
           </button>
-          <div className="mt-1">
-            <LocationSavedBadge visible={locationSaved} />
-          </div>
+          <div className="mt-1"><LocationSavedBadge visible={locationSaved} /></div>
         </div>
 
         <div className="flex flex-col items-start sm:items-end gap-1.5">
           <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-400 text-xs font-bold">
             Worker
           </span>
+          {isActive !== undefined && (
+            <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border ${
+              isActive
+                ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-400"
+                : "bg-surface-muted border-surface-border text-gray-400"
+            }`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${isActive ? "bg-emerald-400 animate-ping" : "bg-gray-500"}`} />
+              {isActive ? "On Duty" : "Off Duty"}
+            </span>
+          )}
         </div>
       </div>
     </div>
   );
 }
 
-function StatsRow({ stats }) {
+function DutyStatsRow({ stats, dashData }) {
   const cards = [
     {
-      id: "stat-assigned",
-      label: "Assigned Today",
-      value: stats.todayAssigned,
+      id: "stat-duty-status",
+      label: "Duty Status",
+      value: stats.isActive ? "Active" : "Inactive",
+      icon: Zap,
+      color: stats.isActive ? "text-emerald-400" : "text-gray-400",
+      bg: stats.isActive ? "bg-emerald-500/10 border-emerald-500/20" : "bg-surface-muted border-surface-border",
+    },
+    {
+      id: "stat-sessions-today",
+      label: "Sessions Today",
+      value: stats.todaySessions,
       icon: ClipboardList,
       color: "text-blue-400",
       bg: "bg-blue-500/10 border-blue-500/20",
     },
     {
-      id: "stat-pending",
-      label: "Pending",
-      value: stats.todayPending,
+      id: "stat-time-today",
+      label: "Active Time Today",
+      value: stats.todayDuration,
       icon: Clock,
       color: "text-amber-400",
       bg: "bg-amber-500/10 border-amber-500/20",
     },
     {
-      id: "stat-completed",
-      label: "Completed",
-      value: stats.todayCompleted,
+      id: "stat-verification",
+      label: "Verification",
+      value: dashData?.verification_status ?? "—",
       icon: CheckCircle2,
-      color: "text-primary-400",
-      bg: "bg-primary-500/10 border-primary-500/20",
-    },
-    {
-      id: "stat-high-priority",
-      label: "High Priority",
-      value: stats.highPriority,
-      icon: AlertTriangle,
-      color: "text-red-400",
-      bg: "bg-red-500/10 border-red-500/20",
+      color: dashData?.verification_status === "APPROVED" ? "text-primary-400" : "text-amber-400",
+      bg: dashData?.verification_status === "APPROVED"
+        ? "bg-primary-500/10 border-primary-500/20"
+        : "bg-amber-500/10 border-amber-500/20",
     },
   ];
 
@@ -203,68 +243,14 @@ function StatsRow({ stats }) {
       {cards.map(({ id, label, value, icon: Icon, color, bg }) => (
         <div key={id} id={id} className="card p-4 flex flex-col gap-3">
           <div className={`w-9 h-9 rounded-xl border flex items-center justify-center ${bg}`}>
-            <Icon className={`w-4.5 h-4.5 ${color}`} />
+            <Icon className={`w-4 h-4 ${color}`} />
           </div>
           <div>
-            <p className="stat-number text-2xl">{value}</p>
+            <p className="font-bold text-xl text-white">{value}</p>
             <p className="text-gray-400 text-xs mt-0.5">{label}</p>
           </div>
         </div>
       ))}
-    </div>
-  );
-}
-
-function ActiveTaskCard({ task }) {
-  const priority = PRIORITY_CONFIG[task?.priority] ?? PRIORITY_CONFIG.MEDIUM;
-
-  if (!task) return null;
-
-  return (
-    <div className="card p-5 border-l-4 border-l-primary-500">
-      <div className="flex items-start justify-between gap-4 mb-4">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Active Task</span>
-            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-xs font-semibold ${priority.className}`}>
-              <AlertTriangle className="w-2.5 h-2.5" />
-              {priority.label} Priority
-            </span>
-          </div>
-          <h2 className="font-display font-semibold text-white text-lg leading-tight">{task.title}</h2>
-        </div>
-        <div className="shrink-0 w-10 h-10 rounded-xl bg-primary-500/15 border border-primary-500/30 flex items-center justify-center">
-          <Zap className="w-5 h-5 text-primary-400" />
-        </div>
-      </div>
-
-      <div className="flex flex-wrap gap-x-5 gap-y-1.5 mb-4 text-sm">
-        <span className="flex items-center gap-1.5 text-gray-400">
-          <MapPin className="w-3.5 h-3.5 text-gray-500" />
-          {task.location}
-        </span>
-        <span className="flex items-center gap-1.5 text-gray-400">
-          <Clock className="w-3.5 h-3.5 text-gray-500" />
-          Est. {task.estimatedDuration}
-        </span>
-      </div>
-
-      <div className="flex gap-3">
-        <button
-          id="active-task-start-btn"
-          className="btn-primary py-2 text-sm flex-1 justify-center"
-        >
-          <Play className="w-4 h-4" />
-          Start Work
-        </button>
-        <button
-          id="active-task-navigate-btn"
-          className="btn-outline py-2 text-sm px-4 justify-center flex items-center gap-2"
-        >
-          <Navigation className="w-4 h-4" />
-          Navigate
-        </button>
-      </div>
     </div>
   );
 }
@@ -314,7 +300,7 @@ function QuickActions() {
             href={href}
             className={`flex items-center gap-3.5 p-3 rounded-xl bg-gradient-to-r border transition-all duration-200 hover:-translate-y-0.5 group ${color}`}
           >
-            <div className={`w-8 h-8 rounded-lg bg-surface-card flex items-center justify-center shrink-0`}>
+            <div className="w-8 h-8 rounded-lg bg-surface-card flex items-center justify-center shrink-0">
               <Icon className={`w-4 h-4 ${iconColor}`} />
             </div>
             <div className="flex-1 min-w-0">
@@ -329,72 +315,60 @@ function QuickActions() {
   );
 }
 
-function RecentActivity({ activity }) {
+function AvailabilitySummary({ dashData, loading }) {
+  if (loading) {
+    return (
+      <div className="card p-5 flex items-center justify-center">
+        <Loader2 className="w-5 h-5 text-primary-400 animate-spin" />
+      </div>
+    );
+  }
+  const session = dashData?.current_session;
   return (
     <div className="card p-5">
       <h3 className="font-display font-semibold text-white text-sm mb-4 flex items-center gap-2">
-        <Clock className="w-4 h-4 text-primary-400" />
-        Recent Activity
+        <TrendingUp className="w-4 h-4 text-primary-400" />
+        Current Session
       </h3>
-      {activity.length === 0 ? (
-        <div className="py-8 text-center text-gray-500 text-sm">No recent activity.</div>
-      ) : (
+      {session ? (
         <div className="space-y-3">
-          {activity.map(({ id, type, description, time, priority }) => {
-            const { Icon, color } = ACTIVITY_ICON[type] ?? ACTIVITY_ICON.assigned;
-            const p = PRIORITY_CONFIG[priority] ?? PRIORITY_CONFIG.LOW;
-            return (
-              <div key={id} className="flex gap-3 group">
-                <div className={`w-7 h-7 rounded-full bg-surface-muted border border-surface-border flex items-center justify-center shrink-0 mt-0.5`}>
-                  <Icon className={`w-3.5 h-3.5 ${color}`} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs text-gray-300 leading-relaxed">{description}</p>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className="text-xs text-gray-500">{time}</span>
-                    <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-semibold border ${p.className}`}>
-                      {p.label}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-gray-400">Session started</span>
+            <span className="text-white font-mono font-semibold">{session.started_at_formatted}</span>
+          </div>
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-gray-400">Elapsed time</span>
+            <span className="text-emerald-400 font-mono font-semibold">{session.elapsed_formatted}</span>
+          </div>
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-gray-400">Municipality</span>
+            <span className="text-white text-xs">{dashData?.municipality_name ?? "—"}</span>
+          </div>
+        </div>
+      ) : (
+        <div className="py-6 text-center">
+          <Clock className="w-8 h-8 text-gray-600 mx-auto mb-2" />
+          <p className="text-gray-500 text-sm">No active session.</p>
+          <p className="text-gray-600 text-xs mt-1">Go active to start tracking your duty hours.</p>
         </div>
       )}
     </div>
   );
 }
 
-function PerformanceSummary({ stats }) {
-  const completionRate = stats.todayAssigned > 0
-    ? Math.round((stats.todayCompleted / stats.todayAssigned) * 100)
-    : 0;
-
+function AvailabilityDetails({ dashData }) {
+  const summary = dashData?.today_summary;
+  if (!summary) return null;
   return (
     <div className="card p-5">
       <h3 className="font-display font-semibold text-white text-sm mb-4 flex items-center gap-2">
         <TrendingUp className="w-4 h-4 text-primary-400" />
-        Today's Performance
+        Today's Duty Summary
       </h3>
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-        <MiniStat label="This Week Completed" value={stats.thisWeekCompleted} suffix="tasks" />
-        <MiniStat label="Avg. Resolution Time" value={stats.averageResolutionMin} suffix="min" />
-        <MiniStat label="Today's Completion" value={`${completionRate}%`} />
-      </div>
-
-      {/* Progress bar */}
-      <div className="mt-4">
-        <div className="flex justify-between text-xs text-gray-400 mb-1.5">
-          <span>Daily progress</span>
-          <span>{stats.todayCompleted}/{stats.todayAssigned} tasks</span>
-        </div>
-        <div className="h-2 rounded-full bg-surface-muted overflow-hidden">
-          <div
-            className="h-full rounded-full bg-gradient-to-r from-primary-600 to-primary-400 transition-all duration-700"
-            style={{ width: `${completionRate}%` }}
-          />
-        </div>
+        <MiniStat label="Sessions Today" value={summary.session_count} suffix="sessions" />
+        <MiniStat label="Total Active Time" value={summary.total_formatted} />
+        <MiniStat label="Verification Status" value={dashData?.verification_status ?? "—"} />
       </div>
     </div>
   );
@@ -403,7 +377,7 @@ function PerformanceSummary({ stats }) {
 function MiniStat({ label, value, suffix }) {
   return (
     <div className="bg-surface-muted rounded-xl p-3 border border-surface-border">
-      <p className="stat-number text-xl">{value}</p>
+      <p className="font-bold text-xl text-white">{value}</p>
       {suffix && <p className="text-primary-400 text-xs font-medium">{suffix}</p>}
       <p className="text-gray-500 text-xs mt-1 leading-tight">{label}</p>
     </div>

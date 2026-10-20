@@ -19,9 +19,7 @@ import { useLocation } from "../../context/LocationContext";
 import { LocationStatus, LocationSavedBadge } from "../../components/common/LocationStatus";
 import { LocationMap } from "../../components/common/LocationMap";
 import { useEffect } from "react";
-import {
-  MOCK_CITIZEN_NOTIFICATIONS,
-} from "../../mocks/citizenMockData";
+// Notifications not yet implemented — real API will be added when backend endpoint is ready
 
 import { API_URL } from "../../config/api.js";
 
@@ -56,7 +54,8 @@ export default function CitizenHomePage() {
     resolvedReports: 0,
   });
   const [recentReports, setRecentReports] = useState([]);
-  const [notifications] = useState(MOCK_CITIZEN_NOTIFICATIONS);
+  // No mock notifications — show empty state until real API is ready
+  const notifications = [];
   const [loading, setLoading] = useState(true);
 
   // Single location state from context

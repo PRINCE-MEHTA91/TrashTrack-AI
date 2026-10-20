@@ -16,14 +16,14 @@ import {
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useLocation } from "../../context/LocationContext";
-import { MOCK_UNREAD_NOTIFICATIONS } from "../../mocks/citizenMockData";
+// Notification badge will be driven by real API — mock removed
 
 const NAV_ITEMS = [
   { to: "/citizen/home", icon: Home, label: "Home" },
   { to: "/citizen/report", icon: AlertCircle, label: "Report Waste" },
   { to: "/citizen/complaints", icon: FileText, label: "My Complaints" },
   { to: "/citizen/map", icon: Map, label: "Map" },
-  { to: "/citizen/notifications", icon: Bell, label: "Notifications", badge: MOCK_UNREAD_NOTIFICATIONS },
+  { to: "/citizen/notifications", icon: Bell, label: "Notifications", badge: 0 },
   { to: "/citizen/profile", icon: User, label: "Profile" },
 ];
 
@@ -251,9 +251,9 @@ export default function CitizenLayout() {
             onClick={() => navigate("/citizen/notifications")}
           >
             <Bell className="w-5 h-5" />
-            {MOCK_UNREAD_NOTIFICATIONS > 0 && (
+            {false && (
               <span className="absolute top-1 right-1 w-4 h-4 rounded-full bg-citizen-500 text-white text-xs flex items-center justify-center font-bold leading-none">
-                {MOCK_UNREAD_NOTIFICATIONS > 9 ? "9+" : MOCK_UNREAD_NOTIFICATIONS}
+                {0}
               </span>
             )}
           </button>

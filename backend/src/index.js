@@ -10,7 +10,9 @@ import workersRoutes from "./routes/workers.routes.js";
 import workerDutyRoutes from "./routes/worker-duty.routes.js";
 import workerTasksRoutes from "./routes/worker-tasks.routes.js";
 import adminDashboardRoutes from "./routes/admin-dashboard.routes.js";
+import adminComplaintsRoutes from "./routes/admin-complaints.routes.js";
 import { errorHandler } from "./middleware/error.middleware.js";
+
 import { query } from "./config/database.js";
 
 dotenv.config({ override: true });
@@ -38,7 +40,8 @@ app.use(
     credentials: true,
   })
 );
-app.use(express.json());
+app.use(express.json({ limit: "25mb" }));
+app.use(express.urlencoded({ extended: true, limit: "25mb" }));
 
 // Health Check Endpoint
 app.get("/api/v1/health", (req, res) => {
@@ -51,7 +54,9 @@ app.use("/api/v1/location", locationRoutes);
 app.use("/api/v1/complaints", complaintsRoutes);
 app.use("/api/v1/municipalities", municipalitiesRoutes);
 app.use("/api/v1/admin/workers", workersRoutes);
+app.use("/api/v1/admin/complaints", adminComplaintsRoutes);
 app.use("/api/v1/admin/dashboard", adminDashboardRoutes);
+
 app.use("/api/v1/worker/tasks", workerTasksRoutes);
 app.use("/api/v1/worker", workerDutyRoutes);
 

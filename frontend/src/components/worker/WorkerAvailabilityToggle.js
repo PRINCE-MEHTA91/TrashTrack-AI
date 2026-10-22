@@ -11,7 +11,9 @@ import {
   Sparkles,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
+import { useLocation } from "../../context/LocationContext";
 import { API_URL } from "../../config/api.js";
+
 
 function formatElapsed(totalSeconds) {
   if (totalSeconds < 0) totalSeconds = 0;
@@ -27,7 +29,9 @@ function formatElapsed(totalSeconds) {
 
 export default function WorkerAvailabilityToggle() {
   const { user, getToken } = useAuth();
+  const { refreshLocation } = useLocation();
   const [loading, setLoading] = useState(true);
+
   const [toggling, setToggling] = useState(false);
   const [availability, setAvailability] = useState(null);
   const [errorModal, setErrorModal] = useState(null);
@@ -148,7 +152,11 @@ export default function WorkerAvailabilityToggle() {
         }));
         if (data.is_active) {
           setElapsedSeconds(0);
+          try {
+            refreshLocation();
+          } catch (_) {}
         }
+
         window.dispatchEvent(
           new CustomEvent("tt:worker-availability-changed", { detail: data })
         );

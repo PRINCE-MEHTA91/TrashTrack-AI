@@ -18,6 +18,7 @@ import { useAuth } from "../../context/AuthContext";
 import { useLocation } from "../../context/LocationContext";
 import { API_URL } from "../../config/api.js";
 import WorkerAvailabilityToggle from "./WorkerAvailabilityToggle";
+import TaskOfferPopup from "./TaskOfferPopup";
 
 function getInitials(name = "") {
   return name
@@ -336,6 +337,9 @@ export default function WorkerLayout() {
         <main className="flex-1 overflow-y-auto">
           <Outlet />
         </main>
+
+        {/* ── Real-time Assignment Notification & Acceptance/Rejection Popup ── */}
+        <TaskOfferPopup />
 
         {/* ── Mobile Bottom Navigation ── */}
         <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-20 bg-surface-card/95 backdrop-blur-md border-t border-surface-border px-2 pb-safe">

@@ -111,11 +111,11 @@ export default function AdminHomePage() {
     },
     {
       icon: Clock,
-      label: "Pending",
-      value: stats?.pending ?? "—",
-      sub: "Awaiting assignment",
+      label: "Awaiting Worker",
+      value: stats?.unassigned ?? "0",
+      sub: "Needs worker assignment",
       color: "amber",
-      to: "/admin/complaints?status=pending",
+      to: "/admin/complaints?tab=unassigned",
     },
     {
       icon: Activity,
@@ -123,7 +123,7 @@ export default function AdminHomePage() {
       value: stats?.inProgress ?? "—",
       sub: "Being resolved",
       color: "blue",
-      to: "/admin/complaints?status=in_progress",
+      to: "/admin/complaints?tab=in_progress",
     },
     {
       icon: CheckCircle2,
@@ -131,16 +131,17 @@ export default function AdminHomePage() {
       value: stats?.resolved ?? "—",
       sub: "Completed",
       color: "emerald",
-      to: "/admin/complaints?status=resolved",
+      to: "/admin/complaints?tab=resolved",
     },
   ];
 
   const quickLinks = [
-    { to: "/admin/complaints", icon: ClipboardList, label: "View All Complaints", color: "text-primary-400" },
+    { to: "/admin/complaints?tab=unassigned", icon: Users, label: "Assign Unallocated Complaints", color: "text-amber-400" },
+    { to: "/admin/complaints", icon: ClipboardList, label: "View All Complaints & Tasks", color: "text-primary-400" },
     { to: "/admin/workforce?tab=approvals", icon: AlertTriangle, label: "Pending Worker Approvals", color: "text-amber-400" },
     { to: "/admin/workforce", icon: Users, label: "Manage Workforce", color: "text-blue-400" },
-    { to: "/admin/reports", icon: TrendingUp, label: "View Analytics", color: "text-emerald-400" },
   ];
+
 
   return (
     <div className="p-4 md:p-6 lg:p-8 max-w-7xl mx-auto space-y-8">

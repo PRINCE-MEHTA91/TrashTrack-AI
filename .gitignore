@@ -1,13 +1,38 @@
-# Security
+# ==============================================================================
+# TrashTrack AI - Git Ignore Policy
+# ==============================================================================
+
+# 1. Security & Internal Docs
 /docs/
 
-# Env
+# 2. Environment Variables & Secrets (NEVER publish to GitHub)
 .env
 .env.*
+.env.local
+.env.*.local
+**/.env
+**/.env.*
+**/.env.local
+**/.env.*.local
 !.env.example
+!**/.env.example
 !.env.production
+!**/.env.production
 
-# OS
+# 3. Sensitive Keys, Certificates & Credentials
+*.pem
+*.key
+*.cert
+*.crt
+*.p12
+*.pfx
+*.id_rsa
+*.id_rsa.pub
+credentials.json
+service-account*.json
+token*.json
+
+# 4. Operating System Files
 .DS_Store
 .DS_Store?
 ._*
@@ -15,57 +40,153 @@
 .Trashes
 ehthumbs.db
 Thumbs.db
+desktop.ini
+.directory
+$RECYCLE.BIN/
 
-# IDEs
+# 5. IDEs, Editors & Workspaces
 .vscode/
+**/.vscode/
 .idea/
+**/.idea/
 *.swp
 *.swo
+*~
+*.sublime-project
+*.sublime-workspace
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
 
-# Node
+# 6. Dependencies & Package Managers
 node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
+**/node_modules/
+jspm_packages/
+.pnp
+.pnp.js
 
-# Builds
-/dist/
-/build/
+# 7. Production Builds, Bundles & Artifacts
+dist/
+**/dist/
+build/
+**/build/
+dist-ssr/
+**/dist-ssr/
+out/
+**/out/
+.vite/
+**/.vite/
 
-# Logs & Debug
+# 8. Logs, Debug & Runtime Output
 *.log
+**/*.log
+logs/
+**/logs/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+lerna-debug.log*
 
-# Coverage & Caches
+# 9. Coverage, Caches & Build State
 coverage/
+**/coverage/
 .cache/
+**/.cache/
 .turbo/
+**/.turbo/
+.parcel-cache/
+**/.parcel-cache/
 *.tsbuildinfo
+**/*.tsbuildinfo
 
-# Sensitive Keys & Certs
-*.pem
-*.key
-*.cert
-*.p12
-*.pfx
-
-# Agent & AI Skill Runtime
+# 10. AI Agents, Assistants & Scratch Runtime
 .agents/
+**/.agents/
 skills-lock.json
+**/skills-lock.json
+.gemini/
+**/.gemini/
+.system_generated/
+**/.system_generated/
 
-# Local Databases & Portable Runtimes
+# 11. Local Databases, Binaries, Backups & Dumps
 postgres-portable/
+**/postgres-portable/
+*.db
+*.sqlite
+*.sqlite3
+*.dump
+*.backup
+*.sql.gz
+*.tar.gz
+*.zip
+*.7z
 
-# Backend One-off, Scratch & Migration Runner Scripts
+# 12. Temporary, Work & Scratch Files
+scratch/
+**/scratch/
+scratch.*
+*.scratch.*
+tmp/
+**/tmp/
+temp/
+**/temp/
+.temp/
+**/.temp/
+*.tmp
+*.temp
+*.bak
+
+# 13. Test & Task Files, Scripts & Unpublic Test Runners
+test-*
+test_*
+test.*
+tast-*
+tast_*
+task-*
+task_*
+task.*
+**/test-*
+**/test_*
+**/tast-*
+**/tast_*
+**/task-*
+**/task_*
+*.test.js
+*.test.mjs
+*.test.ts
+*.spec.js
+*.spec.mjs
+*.spec.ts
+**/*.test.*
+**/*.spec.*
+test-results/
+**/test-results/
+playwright-report/
+**/playwright-report/
+
+# 14. One-off Backend Scripts, Scaffolds & Ad-hoc Migrations
+check-*
+check_*
+check.*
+**/check-*
+**/check_*
+alter.*
+alter*
+alter-*
+**/alter*
+apply-*
+**/apply-*
+migrate-*
+**/migrate-*
+init-*
+**/init-*
+seed-*
+**/seed-*
+debug-*
+**/debug-*
+diagnose-*
+**/diagnose-*
 remove-comments-deep.mjs
-backend/alter*.js
-backend/apply-*.mjs
-backend/init-db.mjs
-backend/migrate-*.mjs
-backend/test-*.mjs
-backend/test-*.js
-

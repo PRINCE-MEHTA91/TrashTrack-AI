@@ -24,7 +24,10 @@ import {
   AlertCircle,
   Sparkles,
   Image as ImageIcon,
+  Zap,
+  Navigation,
 } from "lucide-react";
+
 import { useAuth } from "../../context/AuthContext";
 import { API_URL } from "../../config/api.js";
 
@@ -594,6 +597,23 @@ function TaskCard({ task, isActionLoading, onStart, onOpenComplete, onOpenProgre
             <span className={`inline-flex items-center px-2 py-0.5 rounded-full border text-xs font-semibold ${waste.color}`}>
               {waste.label}
             </span>
+
+            {task.assignment_mode === "AUTO_NEAREST" && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-primary-500/30 bg-primary-500/10 text-primary-400 text-xs font-bold">
+                <Zap className="w-3 h-3" />
+                Auto-Nearest
+              </span>
+            )}
+
+            {task.assignment_distance_meters != null && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-surface-border bg-surface-muted text-gray-300 text-xs">
+                <Navigation className="w-3 h-3 text-primary-400" />
+                {task.assignment_distance_meters >= 1000
+                  ? `${(task.assignment_distance_meters / 1000).toFixed(1)} km`
+                  : `${task.assignment_distance_meters} m`}
+              </span>
+            )}
+
 
             <div className="flex items-center gap-1.5 ml-auto md:ml-0 font-mono text-xs">
               <span className="text-gray-300 bg-surface-muted px-2 py-0.5 rounded border border-surface-border font-medium">

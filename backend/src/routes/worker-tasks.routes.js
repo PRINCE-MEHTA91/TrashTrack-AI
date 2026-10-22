@@ -8,6 +8,9 @@ import {
   updateTaskProgress,
   completeWorkerTask,
   claimWorkerTask,
+  getPendingOffers,
+  acceptTaskOffer,
+  rejectTaskOffer,
 } from "../controllers/worker-tasks.controller.js";
 
 const router = Router();
@@ -18,7 +21,12 @@ router.use(requireRole(["worker"]));
 
 // Task listings & summary
 router.get("/summary", getWorkerTasksSummary);
+router.get("/pending-offers", getPendingOffers);
 router.get("/", getWorkerTasks);
+
+// Offer acceptance / rejection
+router.post("/:id/accept", acceptTaskOffer);
+router.post("/:id/reject", rejectTaskOffer);
 
 // Single task operations
 router.get("/:id", getWorkerTaskById);

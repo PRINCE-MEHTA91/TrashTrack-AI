@@ -1,5 +1,9 @@
 import { query } from "../config/database.js";
 import { z } from "zod";
+import {
+  acceptWorkerTaskAssignment,
+  rejectWorkerTaskAssignment,
+} from "../services/assignment.service.js";
 
 // Live task counts by category
 export async function getWorkerTaskCounts(workerId) {
@@ -105,7 +109,14 @@ export const getWorkerTasks = async (req, res, next) => {
         c.resolution_image_url,
         c.resolved_at,
         c.assigned_at,
+        c.assignment_distance_meters,
+        c.assignment_mode,
+        c.worker_response,
+        c.worker_response_at,
+        c.rejection_reason,
+        c.offer_expires_at,
         c.created_at,
+
         c.updated_at,
         m.name AS municipality_name,
         m.district AS municipality_district,
@@ -183,7 +194,14 @@ export const getWorkerTaskById = async (req, res, next) => {
         c.resolution_image_url,
         c.resolved_at,
         c.assigned_at,
+        c.assignment_distance_meters,
+        c.assignment_mode,
+        c.worker_response,
+        c.worker_response_at,
+        c.rejection_reason,
+        c.offer_expires_at,
         c.created_at,
+
         c.updated_at,
         m.name AS municipality_name,
         m.district AS municipality_district,
@@ -265,10 +283,12 @@ export const startWorkerTask = async (req, res, next) => {
       });
     }
 
-    // Transition to IN_PROGRESS
+    // Transition to IN_PROGRESS (and mark accepted if still pending)
     const updateRes = await query(
       `UPDATE complaints
        SET status = 'IN_PROGRESS',
+           worker_response = 'ACCEPTED',
+           worker_response_at = COALESCE(worker_response_at, CURRENT_TIMESTAMP),
            updated_at = CURRENT_TIMESTAMP
        WHERE id = $1 AND assigned_worker_id = $2
        RETURNING *`,
@@ -500,3 +520,117 @@ export const claimWorkerTask = async (req, res, next) => {
     next(err);
   }
 };
+
+// Fetch pending task assignment offers for the authenticated worker
+export const getPendingOffers = async (req, res, next) => {
+  try {
+    const workerId = req.user.userId;
+    const result = await query(
+      `SELECT
+        c.id,
+        c.citizen_id,
+        c.title,
+        c.description,
+        c.waste_type,
+        c.severity,
+        c.latitude,
+        c.longitude,
+        c.accuracy,
+        c.address,
+        c.image_url,
+        c.status,
+        c.assigned_worker_id,
+        c.assigned_at,
+        c.assignment_distance_meters,
+        c.assignment_mode,
+        c.worker_response,
+        c.offer_expires_at,
+        c.created_at,
+        m.name AS municipality_name,
+        w.name AS ward_name
+       FROM complaints c
+       LEFT JOIN municipalities m ON m.id = c.municipality_id
+       LEFT JOIN wards w ON w.id = c.ward_id
+       WHERE c.assigned_worker_id = $1
+         AND c.worker_response = 'PENDING_ACCEPTANCE'
+         AND (c.offer_expires_at IS NULL OR c.offer_expires_at > CURRENT_TIMESTAMP)
+         AND c.status NOT IN ('RESOLVED', 'COMPLETED', 'CLOSED', 'REJECTED')
+       ORDER BY c.assigned_at DESC`,
+      [workerId]
+    );
+
+    res.json({
+      success: true,
+      offers: result.rows,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Accept assigned task offer
+export const acceptTaskOffer = async (req, res, next) => {
+  try {
+    const workerId = req.user.userId;
+    const { id } = req.params;
+
+    const result = await acceptWorkerTaskAssignment(workerId, id);
+    if (!result.success) {
+      return res.status(result.status || 400).json(result);
+    }
+
+    const counts = await getWorkerTaskCounts(workerId);
+    return res.json({
+      ...result,
+      counts,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Reject assigned task offer with mandatory reason
+const rejectOfferSchema = z.object({
+  reason: z.string({ required_error: "Rejection reason is required." })
+    .trim()
+    .min(1, "Rejection reason cannot be empty or whitespace."),
+  explanation: z.string().optional().nullable(),
+});
+
+export const rejectTaskOffer = async (req, res, next) => {
+  try {
+    const workerId = req.user.userId;
+    const { id } = req.params;
+
+    const parsed = rejectOfferSchema.safeParse(req.body);
+    if (!parsed.success) {
+      const msg = parsed.error.issues?.[0]?.message || "Validation error.";
+      return res.status(400).json({ success: false, message: msg });
+    }
+
+    const { reason, explanation } = parsed.data;
+
+    if (reason === "Other" || reason.toLowerCase().startsWith("other")) {
+      if (!explanation || !explanation.trim()) {
+        return res.status(400).json({
+          success: false,
+          message: "Please provide a written explanation when selecting 'Other'.",
+        });
+      }
+    }
+
+    const result = await rejectWorkerTaskAssignment(workerId, id, reason, explanation);
+    if (!result.success) {
+      return res.status(result.status || 400).json(result);
+    }
+
+    const counts = await getWorkerTaskCounts(workerId);
+    return res.json({
+      ...result,
+      counts,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+

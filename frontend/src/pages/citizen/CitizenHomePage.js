@@ -338,6 +338,7 @@ function RecentReports({ reports, onViewAll }) {
               <div
                 key={report.id}
                 id={`citizen-report-${report.id}`}
+                onClick={onViewAll}
                 className="flex gap-3 p-3 rounded-xl bg-surface-muted border border-surface-border hover:border-citizen-500/30 transition-colors cursor-pointer group"
               >
                 <div className="w-8 h-8 rounded-lg bg-surface-card border border-surface-border flex items-center justify-center shrink-0 mt-0.5">
@@ -356,7 +357,17 @@ function RecentReports({ reports, onViewAll }) {
                     <MapPin className="w-3 h-3 text-gray-500 shrink-0" />
                     <p className="text-xs text-gray-400 truncate">{report.address || "Location unavailable"}</p>
                   </div>
-                  <p className="text-xs text-gray-600 mt-0.5 uppercase">{report.id.split('-')[0]}</p>
+                  <div className="flex items-center justify-between gap-2 mt-1">
+                    <p className="text-xs text-gray-600 uppercase">{report.id.split('-')[0]}</p>
+                    {report.worker_name ? (
+                      <span className="text-[11px] text-citizen-400 font-medium flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-citizen-400" />
+                        {report.worker_name}
+                      </span>
+                    ) : (
+                      <span className="text-[11px] text-amber-400/80 font-medium">Assigning worker...</span>
+                    )}
+                  </div>
                 </div>
               </div>
             );

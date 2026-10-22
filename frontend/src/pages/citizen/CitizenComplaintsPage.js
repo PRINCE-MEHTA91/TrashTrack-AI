@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { FileText, Plus, CheckCircle2, Clock, MapPin, Loader2, Calendar } from "lucide-react";
+import { FileText, Plus, CheckCircle2, Clock, MapPin, Loader2, Calendar, User, Phone } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { API_URL } from "../../config/api.js";
@@ -151,6 +151,34 @@ function ComplaintCard({ complaint }) {
                 {updatedDate}
               </span>
             </div>
+
+            {/* Assigned Worker Info */}
+            {complaint.worker_name ? (
+              <div className="mt-3.5 inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-citizen-500/10 border border-citizen-500/20 text-xs">
+                <div className="w-5 h-5 rounded-full bg-citizen-500/20 flex items-center justify-center text-citizen-400 shrink-0">
+                  <User className="w-3 h-3" />
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-gray-400">Assigned Worker:</span>
+                  <span className="font-semibold text-white">{complaint.worker_name}</span>
+                  {complaint.worker_phone && (
+                    <a
+                      href={`tel:${complaint.worker_phone}`}
+                      className="inline-flex items-center gap-1 text-citizen-400 hover:text-citizen-300 font-medium ml-1 transition-colors"
+                      title="Call Worker"
+                    >
+                      <Phone className="w-3 h-3" />
+                      <span>{complaint.worker_phone}</span>
+                    </a>
+                  )}
+                </div>
+              </div>
+            ) : complaint.status === "SUBMITTED" ? (
+              <div className="mt-3.5 inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-surface-muted border border-surface-border text-xs text-gray-400">
+                <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+                <span>Assigning nearest available municipal worker...</span>
+              </div>
+            ) : null}
           </div>
         </div>
         <span className={`inline-flex items-center px-3 py-1 rounded-full border text-xs font-semibold shrink-0 w-max ${statusInfo.className}`}>

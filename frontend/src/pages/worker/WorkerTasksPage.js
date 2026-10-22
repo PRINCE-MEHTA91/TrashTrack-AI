@@ -23,6 +23,7 @@ import {
   Check,
   AlertCircle,
   Sparkles,
+  Image as ImageIcon,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { API_URL } from "../../config/api.js";
@@ -955,10 +956,10 @@ function CompleteTaskModal({ task, isLoading, onClose, onSubmit }) {
               Resolution Photo Evidence (Optional)
             </label>
             <div className="flex items-center gap-4">
-              <label className="flex-1 border-2 border-dashed border-surface-border hover:border-primary-500/50 rounded-xl p-4 flex flex-col items-center justify-center cursor-pointer transition-colors bg-surface-muted/50">
+              <label className="flex-1 border-2 border-dashed border-surface-border hover:border-primary-500/50 rounded-xl p-4 flex flex-col items-center justify-center cursor-pointer transition-colors bg-surface-muted/50 text-center">
                 <Camera className="w-6 h-6 text-primary-400 mb-1" />
-                <span className="text-xs text-gray-300 font-medium">Click to upload cleanup photo</span>
-                <span className="text-[11px] text-gray-500">JPG, PNG or WebP up to 5MB</span>
+                <span className="text-xs text-gray-200 font-medium">Click to take cleanup photo</span>
+                <span className="text-[11px] text-gray-400">Live rear camera • JPG, PNG or WebP up to 5MB</span>
                 <input
                   type="file"
                   accept="image/*"

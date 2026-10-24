@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
   ClipboardList,
@@ -23,6 +23,7 @@ import {
   Check,
   AlertCircle,
   Sparkles,
+  RotateCcw,
   Image as ImageIcon,
   Zap,
   Navigation,
@@ -876,34 +877,207 @@ function EmptyState({ activeTab, hasFilters, onClearFilters }) {
   );
 }
 
-// Complete task modal
+// ─── Camera capture helper used inside CompleteTaskModal ──────────────────────
+function CameraCapture({ onCapture, onClose }) {
+  const videoRef = useRef(null);
+  const streamRef = useRef(null);
+  const [cameraError, setCameraError] = useState("");
+  const [cameraReady, setCameraReady] = useState(false);
+
+  // Stop any active camera stream
+  const stopStream = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+    }
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const startCamera = async () => {
+      setCameraError("");
+      setCameraReady(false);
+
+      if (!navigator.mediaDevices?.getUserMedia) {
+        setCameraError("Your browser does not support camera access. Please use Chrome or Safari on your mobile device.");
+        return;
+      }
+
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 }, height: { ideal: 720 } },
+          audio: false,
+        });
+
+        if (cancelled) {
+          stream.getTracks().forEach((t) => t.stop());
+          return;
+        }
+
+        streamRef.current = stream;
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          videoRef.current.onloadedmetadata = () => {
+            videoRef.current.play().then(() => setCameraReady(true)).catch(() => {});
+          };
+        }
+      } catch (err) {
+        if (cancelled) return;
+        if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
+          setCameraError("Camera permission denied. Please allow camera access in your browser settings and try again.");
+        } else if (err.name === "NotFoundError" || err.name === "DevicesNotFoundError") {
+          setCameraError("No camera found on this device. Please use a device with a rear camera.");
+        } else if (err.name === "NotReadableError") {
+          setCameraError("Camera is in use by another app. Please close other apps using the camera and try again.");
+        } else {
+          setCameraError(`Camera error: ${err.message || "Unknown error occurred."}`);
+        }
+      }
+    };
+
+    startCamera();
+    return () => {
+      cancelled = true;
+      stopStream();
+    };
+  }, []);
+
+  const handleCapture = () => {
+    if (!videoRef.current || !cameraReady) return;
+    const video = videoRef.current;
+    const canvas = document.createElement("canvas");
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(video, 0, 0);
+
+    const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
+
+    // Check ≤ 5 MB (base64 overhead: multiply by 0.75)
+    const approxBytes = dataUrl.length * 0.75;
+    if (approxBytes > 5 * 1024 * 1024) {
+      setCameraError("Captured image exceeds 5 MB. Please move to a brighter area or try again.");
+      return;
+    }
+
+    stopStream();
+    onCapture(dataUrl);
+  };
+
+  const handleCancel = () => {
+    stopStream();
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 z-[60] flex flex-col bg-black">
+      {/* Camera toolbar */}
+      <div className="flex items-center justify-between px-4 py-3 bg-black/80 backdrop-blur-sm shrink-0">
+        <span className="text-white text-sm font-semibold flex items-center gap-2">
+          <Camera className="w-4 h-4 text-primary-400" />
+          Take Cleanup Photo
+        </span>
+        <button
+          type="button"
+          onClick={handleCancel}
+          className="text-gray-300 hover:text-white transition-colors p-1"
+          aria-label="Close camera"
+        >
+          <X className="w-5 h-5" />
+        </button>
+      </div>
+
+      {/* Viewfinder or error */}
+      <div className="flex-1 relative flex items-center justify-center bg-black overflow-hidden">
+        {cameraError ? (
+          <div className="flex flex-col items-center gap-4 p-8 text-center max-w-sm">
+            <div className="w-14 h-14 rounded-full bg-red-500/20 border border-red-500/30 flex items-center justify-center">
+              <AlertCircle className="w-7 h-7 text-red-400" />
+            </div>
+            <p className="text-red-300 text-sm leading-relaxed">{cameraError}</p>
+            <button
+              type="button"
+              onClick={handleCancel}
+              className="px-5 py-2.5 rounded-xl bg-surface-card border border-surface-border text-gray-300 text-sm font-medium hover:text-white transition-colors"
+            >
+              Go Back
+            </button>
+          </div>
+        ) : (
+          <>
+            <video
+              ref={videoRef}
+              playsInline
+              muted
+              autoPlay
+              className="w-full h-full object-cover"
+              style={{ transform: "scaleX(1)" }}
+            />
+            {!cameraReady && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/60">
+                <Loader2 className="w-8 h-8 text-primary-400 animate-spin" />
+              </div>
+            )}
+            {/* Corner guide brackets */}
+            {cameraReady && (
+              <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+                <div className="w-64 h-48 relative">
+                  <span className="absolute top-0 left-0 w-6 h-6 border-t-2 border-l-2 border-emerald-400 rounded-tl" />
+                  <span className="absolute top-0 right-0 w-6 h-6 border-t-2 border-r-2 border-emerald-400 rounded-tr" />
+                  <span className="absolute bottom-0 left-0 w-6 h-6 border-b-2 border-l-2 border-emerald-400 rounded-bl" />
+                  <span className="absolute bottom-0 right-0 w-6 h-6 border-b-2 border-r-2 border-emerald-400 rounded-br" />
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
+      {/* Capture button */}
+      {!cameraError && (
+        <div className="flex items-center justify-center py-6 bg-black/80 backdrop-blur-sm shrink-0">
+          <button
+            type="button"
+            onClick={handleCapture}
+            disabled={!cameraReady}
+            className="w-16 h-16 rounded-full bg-white disabled:opacity-40 hover:scale-105 active:scale-95 transition-transform shadow-lg flex items-center justify-center"
+            aria-label="Capture photo"
+          >
+            <div className="w-12 h-12 rounded-full bg-emerald-500 flex items-center justify-center">
+              <Camera className="w-6 h-6 text-white" />
+            </div>
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Complete task modal ───────────────────────────────────────────────────────
 function CompleteTaskModal({ task, isLoading, onClose, onSubmit }) {
   const [resolutionNote, setResolutionNote] = useState("");
   const [imagePreview, setImagePreview] = useState(null);
   const [imageBase64, setImageBase64] = useState("");
   const [formError, setFormError] = useState("");
+  const [showCamera, setShowCamera] = useState(false);
 
-  const handleFileChange = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  // Stop any lingering camera stream when this modal unmounts
+  const handleModalClose = () => {
+    setShowCamera(false);
+    onClose();
+  };
 
-    if (!file.type.startsWith("image/")) {
-      setFormError("Please select an image file (JPEG, PNG, WebP).");
-      return;
-    }
-
-    if (file.size > 5 * 1024 * 1024) {
-      setFormError("Image must be smaller than 5MB.");
-      return;
-    }
-
+  const handleCaptured = (dataUrl) => {
+    setShowCamera(false);
+    setImagePreview(dataUrl);
+    setImageBase64(dataUrl);
     setFormError("");
-    const reader = new FileReader();
-    reader.onload = () => {
-      setImagePreview(reader.result);
-      setImageBase64(reader.result);
-    };
-    reader.readAsDataURL(file);
+  };
+
+  const handleRemovePhoto = () => {
+    setImagePreview(null);
+    setImageBase64("");
   };
 
   const handleFormSubmit = (e) => {
@@ -920,125 +1094,157 @@ function CompleteTaskModal({ task, isLoading, onClose, onSubmit }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in">
-      <div className="card w-full max-w-lg bg-surface-card border border-surface-border overflow-hidden shadow-2xl animate-scale-up">
-        {/* Modal Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-surface-border">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
-              <CheckCircle2 className="w-4 h-4" />
+    <>
+      {/* Camera fullscreen overlay */}
+      {showCamera && (
+        <CameraCapture
+          onCapture={handleCaptured}
+          onClose={() => setShowCamera(false)}
+        />
+      )}
+
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in">
+        <div className="card w-full max-w-lg bg-surface-card border border-surface-border overflow-hidden shadow-2xl animate-scale-up">
+          {/* Modal Header */}
+          <div className="flex items-center justify-between px-6 py-4 border-b border-surface-border">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+                <CheckCircle2 className="w-4 h-4" />
+              </div>
+              <div>
+                <h2 className="text-base font-display font-semibold text-white">Mark Task Completed</h2>
+                <p className="text-xs text-gray-400">Submit resolution notes and photo evidence</p>
+              </div>
             </div>
+            <button
+              onClick={handleModalClose}
+              className="text-gray-400 hover:text-white transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          {/* Modal Form */}
+          <form onSubmit={handleFormSubmit} className="p-6 space-y-4">
+            <div className="p-3 rounded-xl bg-surface-muted border border-surface-border text-xs">
+              <span className="text-gray-400 block mb-0.5">Task:</span>
+              <span className="font-semibold text-white">{task.title}</span>
+              {task.address && <span className="block text-gray-400 mt-0.5">{task.address}</span>}
+            </div>
+
+            {formError && (
+              <div className="p-3 rounded-xl bg-red-500/15 border border-red-500/30 text-red-300 text-xs">
+                {formError}
+              </div>
+            )}
+
+            {/* Resolution Note */}
             <div>
-              <h2 className="text-base font-display font-semibold text-white">Mark Task Completed</h2>
-              <p className="text-xs text-gray-400">Submit resolution notes and photo evidence</p>
+              <label className="block text-xs font-semibold text-gray-200 mb-1">
+                Resolution Note <span className="text-red-400">*</span>
+              </label>
+              <textarea
+                id="resolution-note-input"
+                rows={3}
+                value={resolutionNote}
+                onChange={(e) => setResolutionNote(e.target.value)}
+                placeholder="E.g., Cleared all plastic waste from the roadside, sanitized the spot, and transported waste to sorting station."
+                className="w-full bg-surface-muted border border-surface-border rounded-xl p-3 text-xs md:text-sm text-white placeholder-gray-500 focus:outline-none focus:border-primary-500/50 resize-none"
+              />
             </div>
-          </div>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-white transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
 
-        {/* Modal Form */}
-        <form onSubmit={handleFormSubmit} className="p-6 space-y-4">
-          <div className="p-3 rounded-xl bg-surface-muted border border-surface-border text-xs">
-            <span className="text-gray-400 block mb-0.5">Task:</span>
-            <span className="font-semibold text-white">{task.title}</span>
-            {task.address && <span className="block text-gray-400 mt-0.5">{task.address}</span>}
-          </div>
-
-          {formError && (
-            <div className="p-3 rounded-xl bg-red-500/15 border border-red-500/30 text-red-300 text-xs">
-              {formError}
-            </div>
-          )}
-
-          {/* Resolution Description */}
-          <div>
-            <label className="block text-xs font-semibold text-gray-200 mb-1">
-              Resolution Note <span className="text-red-400">*</span>
-            </label>
-            <textarea
-              id="resolution-note-input"
-              rows={3}
-              value={resolutionNote}
-              onChange={(e) => setResolutionNote(e.target.value)}
-              placeholder="E.g., Cleared all plastic waste from the roadside, sanitized the spot, and transported waste to sorting station."
-              className="w-full bg-surface-muted border border-surface-border rounded-xl p-3 text-xs md:text-sm text-white placeholder-gray-500 focus:outline-none focus:border-primary-500/50 resize-none"
-            />
-          </div>
-
-          {/* Completion Photo Evidence */}
-          <div>
-            <label className="block text-xs font-semibold text-gray-200 mb-1">
-              Resolution Photo Evidence (Optional)
-            </label>
-            <div className="flex items-center gap-4">
-              <label className="flex-1 border-2 border-dashed border-surface-border hover:border-primary-500/50 rounded-xl p-4 flex flex-col items-center justify-center cursor-pointer transition-colors bg-surface-muted/50 text-center">
-                <Camera className="w-6 h-6 text-primary-400 mb-1" />
-                <span className="text-xs text-gray-200 font-medium">Click to take cleanup photo</span>
-                <span className="text-[11px] text-gray-400">Live rear camera • JPG, PNG or WebP up to 5MB</span>
-                <input
-                  type="file"
-                  accept="image/*"
-                  capture="environment"
-                  onChange={handleFileChange}
-                  className="hidden"
-                />
+            {/* Camera-only Photo Evidence */}
+            <div>
+              <label className="block text-xs font-semibold text-gray-200 mb-1">
+                Resolution Photo Evidence <span className="text-gray-500">(Optional)</span>
               </label>
 
-              {imagePreview && (
-                <div className="relative w-20 h-20 rounded-xl overflow-hidden border border-surface-border shrink-0">
-                  <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setImagePreview(null);
-                      setImageBase64("");
-                    }}
-                    className="absolute top-1 right-1 p-1 rounded-full bg-black/60 text-white hover:text-red-400"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
+              {imagePreview ? (
+                /* ── Preview state ── */
+                <div className="relative rounded-xl overflow-hidden border border-surface-border bg-surface-muted">
+                  <img
+                    src={imagePreview}
+                    alt="Cleanup evidence preview"
+                    className="w-full max-h-52 object-cover"
+                  />
+                  {/* Overlay action strip */}
+                  <div className="absolute bottom-0 inset-x-0 flex items-center justify-between px-3 py-2 bg-black/60 backdrop-blur-sm">
+                    <span className="text-xs text-emerald-400 font-medium flex items-center gap-1.5">
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      Photo captured
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setShowCamera(true)}
+                        className="flex items-center gap-1 text-xs text-primary-400 hover:text-primary-300 font-medium transition-colors"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5" />
+                        Retake
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleRemovePhoto}
+                        className="flex items-center gap-1 text-xs text-red-400 hover:text-red-300 font-medium transition-colors"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                        Remove
+                      </button>
+                    </div>
+                  </div>
                 </div>
+              ) : (
+                /* ── Camera trigger state ── */
+                <button
+                  type="button"
+                  id="open-camera-btn"
+                  onClick={() => setShowCamera(true)}
+                  className="w-full border-2 border-dashed border-surface-border hover:border-primary-500/50 rounded-xl p-5 flex flex-col items-center justify-center cursor-pointer transition-all bg-surface-muted/50 text-center group"
+                >
+                  <div className="w-10 h-10 rounded-full bg-primary-500/15 border border-primary-500/20 flex items-center justify-center mb-2 group-hover:bg-primary-500/25 transition-colors">
+                    <Camera className="w-5 h-5 text-primary-400" />
+                  </div>
+                  <span className="text-xs text-gray-200 font-semibold">Take Cleanup Photo</span>
+                  <span className="text-[11px] text-gray-500 mt-0.5">
+                    Rear camera • JPEG up to 5 MB
+                  </span>
+                </button>
               )}
             </div>
-          </div>
 
-          {/* Modal Actions */}
-          <div className="flex items-center justify-end gap-3 pt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={isLoading}
-              className="px-4 py-2 rounded-xl text-xs font-semibold text-gray-400 hover:text-white transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              id="confirm-complete-btn"
-              type="submit"
-              disabled={isLoading}
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-glow-sm transition-all disabled:opacity-50"
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  <span>Submitting…</span>
-                </>
-              ) : (
-                <>
-                  <Check className="w-3.5 h-3.5" />
-                  <span>Submit & Complete</span>
-                </>
-              )}
-            </button>
-          </div>
-        </form>
+            {/* Modal Actions */}
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={handleModalClose}
+                disabled={isLoading}
+                className="px-4 py-2 rounded-xl text-xs font-semibold text-gray-400 hover:text-white transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                id="confirm-complete-btn"
+                type="submit"
+                disabled={isLoading}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-glow-sm transition-all disabled:opacity-50"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>Submitting…</span>
+                  </>
+                ) : (
+                  <>
+                    <Check className="w-3.5 h-3.5" />
+                    <span>Submit & Complete</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 

@@ -4,6 +4,7 @@ import {
   acceptWorkerTaskAssignment,
   rejectWorkerTaskAssignment,
 } from "../services/assignment.service.js";
+import { broadcastZoneUpdate } from "../services/realtime.service.js";
 
 // Live task counts by category
 export async function getWorkerTaskCounts(workerId) {
@@ -297,6 +298,13 @@ export const startWorkerTask = async (req, res, next) => {
 
     const counts = await getWorkerTaskCounts(workerId);
 
+    broadcastZoneUpdate(updateRes.rows[0]?.municipality_id, {
+      type: "task_started",
+      complaintId: id,
+      workerId,
+      status: "IN_PROGRESS",
+    });
+
     res.json({
       success: true,
       message: "Task started successfully and moved to In Progress.",
@@ -357,6 +365,12 @@ export const updateTaskProgress = async (req, res, next) => {
        RETURNING *`,
       [appendedNote, id, workerId]
     );
+
+    broadcastZoneUpdate(updateRes.rows[0]?.municipality_id, {
+      type: "progress_updated",
+      complaintId: id,
+      workerId,
+    });
 
     res.json({
       success: true,
@@ -435,6 +449,13 @@ export const completeWorkerTask = async (req, res, next) => {
 
     const counts = await getWorkerTaskCounts(workerId);
 
+    broadcastZoneUpdate(updateRes.rows[0]?.municipality_id, {
+      type: "complaint_resolved",
+      complaintId: id,
+      workerId,
+      status: "RESOLVED",
+    });
+
     res.json({
       success: true,
       message: "Task successfully marked as completed!",
@@ -510,6 +531,13 @@ export const claimWorkerTask = async (req, res, next) => {
 
     const counts = await getWorkerTaskCounts(workerId);
 
+    broadcastZoneUpdate(updateRes.rows[0]?.municipality_id, {
+      type: "task_claimed",
+      complaintId: id,
+      workerId,
+      status: "PENDING",
+    });
+
     res.json({
       success: true,
       message: "Task claimed and added to your assigned pending tasks.",
@@ -580,6 +608,11 @@ export const acceptTaskOffer = async (req, res, next) => {
     }
 
     const counts = await getWorkerTaskCounts(workerId);
+    broadcastZoneUpdate(null, {
+      type: "offer_accepted",
+      complaintId: id,
+      workerId,
+    });
     return res.json({
       ...result,
       counts,
@@ -625,9 +658,199 @@ export const rejectTaskOffer = async (req, res, next) => {
     }
 
     const counts = await getWorkerTaskCounts(workerId);
+    broadcastZoneUpdate(null, {
+      type: "offer_rejected",
+      complaintId: id,
+      workerId,
+    });
     return res.json({
       ...result,
       counts,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// GET /api/v1/worker/tasks/zone-complaints - Public complaints within worker's municipality
+export const getZoneComplaints = async (req, res, next) => {
+  try {
+    const workerId = req.user.userId;
+
+    // Resolve the worker's municipality from the database (never trust frontend)
+    const workerRes = await query(
+      `SELECT municipality_id FROM users WHERE id = $1 AND role = 'worker'`,
+      [workerId]
+    );
+    if (workerRes.rows.length === 0) {
+      return res.status(403).json({ success: false, message: "Forbidden: Worker not found." });
+    }
+
+    const municipalityId = workerRes.rows[0].municipality_id;
+
+    const {
+      tab = "all",
+      search = "",
+      severity,
+      waste_type,
+      page = "1",
+      limit = "25",
+    } = req.query;
+
+    const pageNum = Math.max(1, parseInt(page, 10) || 1);
+    const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10) || 25));
+    const offset = (pageNum - 1) * limitNum;
+
+    // Build scope conditions: municipality-scoped if the worker has one assigned
+    const scopeConditions = [];
+    const scopeParams = [];
+
+    if (municipalityId) {
+      scopeParams.push(municipalityId);
+      scopeConditions.push(`c.municipality_id = $${scopeParams.length}`);
+    }
+
+    const scopeWhere =
+      scopeConditions.length > 0 ? `WHERE ${scopeConditions.join(" AND ")}` : "";
+
+    // Live status counts for tab badges
+    const countsRes = await query(
+      `SELECT
+         COUNT(DISTINCT c.id) FILTER (WHERE c.status NOT IN ('REJECTED'))                                                   AS total_all,
+         COUNT(DISTINCT c.id) FILTER (WHERE c.status IN ('PENDING','SUBMITTED','ASSIGNED') AND c.assigned_worker_id IS NOT NULL) AS total_pending,
+         COUNT(DISTINCT c.id) FILTER (WHERE c.status = 'IN_PROGRESS')                                                      AS total_in_progress,
+         COUNT(DISTINCT c.id) FILTER (WHERE c.status IN ('RESOLVED','COMPLETED','CLOSED','VERIFIED'))                      AS total_resolved,
+         COUNT(DISTINCT c.id) FILTER (WHERE c.assigned_worker_id IS NULL AND c.status NOT IN ('RESOLVED','COMPLETED','CLOSED','VERIFIED','REJECTED')) AS total_unassigned
+       FROM complaints c
+       ${scopeWhere}`,
+      scopeParams
+    );
+
+    const cRow = countsRes.rows[0] || {};
+    const counts = {
+      all: Number(cRow.total_all) || 0,
+      pending: Number(cRow.total_pending) || 0,
+      in_progress: Number(cRow.total_in_progress) || 0,
+      resolved: Number(cRow.total_resolved) || 0,
+      unassigned: Number(cRow.total_unassigned) || 0,
+    };
+
+    // Build filter conditions on top of scope
+    const filterConditions = [...scopeConditions];
+    const filterParams = [...scopeParams];
+
+    if (tab === "unassigned") {
+      filterConditions.push(
+        `c.assigned_worker_id IS NULL AND c.status NOT IN ('RESOLVED','COMPLETED','CLOSED','VERIFIED','REJECTED')`
+      );
+    } else if (tab === "pending") {
+      filterConditions.push(
+        `c.status IN ('PENDING','SUBMITTED','ASSIGNED') AND c.assigned_worker_id IS NOT NULL`
+      );
+    } else if (tab === "in_progress") {
+      filterConditions.push(`c.status = 'IN_PROGRESS'`);
+    } else if (tab === "resolved") {
+      filterConditions.push(`c.status IN ('RESOLVED','COMPLETED','CLOSED','VERIFIED')`);
+    } else {
+      filterConditions.push(`c.status NOT IN ('REJECTED')`);
+    }
+
+    if (search && search.trim() !== "") {
+      filterParams.push(`%${search.trim()}%`);
+      const pIdx = filterParams.length;
+      filterConditions.push(
+        `(c.title ILIKE $${pIdx} OR c.description ILIKE $${pIdx} OR c.address ILIKE $${pIdx})`
+      );
+    }
+
+    if (severity && ["LOW", "MEDIUM", "HIGH"].includes(severity.toUpperCase())) {
+      filterParams.push(severity.toUpperCase());
+      filterConditions.push(`c.severity = $${filterParams.length}`);
+    }
+
+    if (
+      waste_type &&
+      ["ORGANIC", "PLASTIC", "HAZARDOUS", "BULK", "OTHER"].includes(waste_type.toUpperCase())
+    ) {
+      filterParams.push(waste_type.toUpperCase());
+      filterConditions.push(`c.waste_type = $${filterParams.length}`);
+    }
+
+    const whereClause =
+      filterConditions.length > 0 ? `WHERE ${filterConditions.join(" AND ")}` : "";
+
+    // Total filtered count for pagination
+    const countTotalRes = await query(
+      `SELECT COUNT(DISTINCT c.id) AS total FROM complaints c ${whereClause}`,
+      filterParams
+    );
+    const totalFiltered = Number(countTotalRes.rows[0]?.total) || 0;
+
+    // Privacy query (excludes citizen_email/phone) + workerId for is_my_task
+    filterParams.push(workerId);
+    const myTaskIdx = filterParams.length;
+
+    const dataParamsWithWorker = [...filterParams, limitNum, offset];
+
+    const dataSql = `
+      SELECT
+        c.id,
+        c.title,
+        c.description,
+        c.waste_type,
+        c.severity,
+        c.latitude,
+        c.longitude,
+        c.address,
+        c.image_url,
+        c.status,
+        c.assigned_worker_id,
+        c.assigned_at,
+        c.assignment_distance_meters,
+        c.assignment_mode,
+        c.worker_response,
+        c.resolution_note,
+        c.resolved_at,
+        c.created_at,
+        c.updated_at,
+        m.name  AS municipality_name,
+        wd.name AS ward_name,
+        wd.ward_number,
+        -- Only expose the assigned worker's public name, not their contact details
+        wrk.full_name AS assigned_worker_name,
+        -- Flag whether this complaint is assigned to the requesting worker
+        (c.assigned_worker_id = $${myTaskIdx}) AS is_my_task
+      FROM complaints c
+      LEFT JOIN municipalities m  ON m.id  = c.municipality_id
+      LEFT JOIN wards wd          ON wd.id = c.ward_id
+      LEFT JOIN users wrk         ON wrk.id = c.assigned_worker_id
+      ${whereClause}
+      ORDER BY
+        CASE
+          WHEN c.status = 'IN_PROGRESS'                          THEN 1
+          WHEN c.status IN ('PENDING','SUBMITTED','ASSIGNED')     THEN 2
+          WHEN c.assigned_worker_id IS NULL                       THEN 3
+          ELSE 4
+        END,
+        c.created_at DESC
+      LIMIT $${dataParamsWithWorker.length - 1} OFFSET $${dataParamsWithWorker.length}
+    `;
+
+    const dataRes = await query(dataSql, dataParamsWithWorker);
+
+    return res.json({
+      success: true,
+      counts,
+      zone: municipalityId
+        ? { municipality_id: municipalityId }
+        : null,
+      complaints: dataRes.rows,
+      pagination: {
+        total: totalFiltered,
+        page: pageNum,
+        limit: limitNum,
+        pages: Math.ceil(totalFiltered / limitNum) || 1,
+      },
     });
   } catch (err) {
     next(err);

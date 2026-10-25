@@ -1,14 +1,4 @@
-/**
- * PlaceholderPage – reusable clean placeholder for unimplemented worker sections.
- *
- * Props:
- *   id            – HTML id for the outer container (for testing)
- *   icon          – Lucide icon component
- *   title         – Page title
- *   description   – Descriptive text about what will be here
- *   badge         – Optional badge text (e.g. "Coming Soon")
- *   badgeVariant  – "default" | "primary"
- */
+// Reusable placeholder view for worker sections
 export default function PlaceholderPage({
   id,
   icon: Icon,

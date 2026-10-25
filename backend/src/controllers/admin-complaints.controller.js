@@ -5,10 +5,9 @@ import {
   manualAssignComplaint,
   getComplaintAssignmentLogs,
 } from "../services/assignment.service.js";
+import { broadcastZoneUpdate } from "../services/realtime.service.js";
 
-/**
- * Helper to fetch and verify the authenticated admin and their assigned municipality.
- */
+// Helper to fetch and verify admin municipality
 async function getAuthenticatedAdmin(userId) {
   const res = await query(
     `SELECT u.id, u.role, u.full_name, u.email, u.municipality_id,
@@ -24,11 +23,7 @@ async function getAuthenticatedAdmin(userId) {
   return admin;
 }
 
-/**
- * GET /api/v1/admin/complaints
- * Returns paginated complaints strictly filtered by the admin's municipality jurisdiction.
- * Supports tabs: 'all', 'pending', 'in_progress', 'resolved', 'unassigned'.
- */
+// GET /api/v1/admin/complaints - Paginated complaints by municipality jurisdiction
 export const listAdminComplaints = async (req, res, next) => {
   try {
     const admin = await getAuthenticatedAdmin(req.user.userId);
@@ -213,10 +208,7 @@ export const listAdminComplaints = async (req, res, next) => {
   }
 };
 
-/**
- * POST /api/v1/admin/complaints/:id/assign
- * Manually assign or reassign a complaint to a specific verified worker.
- */
+// POST /api/v1/admin/complaints/:id/assign - Manually assign complaint to worker
 const manualAssignSchema = z.object({
   workerId: z.string().uuid("Valid workerId UUID is required."),
   notes: z.string().optional(),
@@ -238,6 +230,12 @@ export const assignComplaintManually = async (req, res, next) => {
       return res.status(result.status || 400).json(result);
     }
 
+    broadcastZoneUpdate(admin.municipality_id, {
+      type: "complaint_assigned",
+      complaintId,
+      workerId,
+    });
+
     return res.json(result);
   } catch (err) {
     if (err instanceof z.ZodError) {
@@ -247,10 +245,7 @@ export const assignComplaintManually = async (req, res, next) => {
   }
 };
 
-/**
- * POST /api/v1/admin/complaints/:id/auto-assign
- * Re-trigger automatic nearest eligible worker assignment on an unassigned complaint.
- */
+// POST /api/v1/admin/complaints/:id/auto-assign - Auto-assign complaint to nearest worker
 export const triggerAutoAssign = async (req, res, next) => {
   try {
     const admin = await getAuthenticatedAdmin(req.user.userId);
@@ -261,16 +256,18 @@ export const triggerAutoAssign = async (req, res, next) => {
     const { id: complaintId } = req.params;
     const result = await assignComplaintToNearestWorker(complaintId);
 
+    broadcastZoneUpdate(admin.municipality_id, {
+      type: "complaint_assigned",
+      complaintId,
+    });
+
     return res.json(result);
   } catch (err) {
     next(err);
   }
 };
 
-/**
- * GET /api/v1/admin/complaints/:id/logs
- * Retrieve the assignment audit trail for a complaint.
- */
+// GET /api/v1/admin/complaints/:id/logs - Assignment audit trail for complaint
 export const getComplaintLogs = async (req, res, next) => {
   try {
     const admin = await getAuthenticatedAdmin(req.user.userId);

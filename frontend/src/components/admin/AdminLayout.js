@@ -32,10 +32,10 @@ const NAV_GROUPS = [
   {
     id: "complaints",
     icon: ClipboardList,
-    label: "Complaints & Tasks",
+    label: "Community Complaints",
     to: "/admin/complaints",
     children: [
-      { label: "All Complaints", to: "/admin/complaints" },
+      { label: "Community Feed", to: "/admin/complaints" },
       { label: "Pending", to: "/admin/complaints?status=pending" },
       { label: "In Progress", to: "/admin/complaints?status=in_progress" },
       { label: "Resolved", to: "/admin/complaints?status=resolved" },

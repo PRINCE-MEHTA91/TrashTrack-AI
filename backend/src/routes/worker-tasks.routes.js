@@ -11,6 +11,7 @@ import {
   getPendingOffers,
   acceptTaskOffer,
   rejectTaskOffer,
+  getZoneComplaints,
 } from "../controllers/worker-tasks.controller.js";
 
 const router = Router();
@@ -22,6 +23,7 @@ router.use(requireRole(["worker"]));
 // Task listings & summary
 router.get("/summary", getWorkerTasksSummary);
 router.get("/pending-offers", getPendingOffers);
+router.get("/zone-complaints", getZoneComplaints);
 router.get("/", getWorkerTasks);
 
 // Offer acceptance / rejection

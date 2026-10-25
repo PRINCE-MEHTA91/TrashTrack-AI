@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { query } from "../config/database.js";
 import { assignComplaintToNearestWorker } from "../services/assignment.service.js";
+import { broadcastZoneUpdate } from "../services/realtime.service.js";
 
 const complaintSchema = z.object({
   title: z.string().min(3),
@@ -120,6 +121,15 @@ export const createComplaint = async (req, res, next) => {
     );
 
     const finalComplaint = freshRes.rows[0] || savedComplaint;
+
+    broadcastZoneUpdate(finalComplaint.municipality_id, {
+      type: "complaint_created",
+      complaintId: finalComplaint.id,
+      municipalityId: finalComplaint.municipality_id,
+      wardId: finalComplaint.ward_id,
+      status: finalComplaint.status,
+      title: finalComplaint.title,
+    });
 
     res.status(201).json({
       success: true,

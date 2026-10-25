@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { API_URL } from "../../config/api.js";
+import CommunityComplaintsFeed from "../../components/common/CommunityComplaintsFeed";
 
 const TABS = [
   { id: "all",         label: "All Complaints",   icon: ClipboardList, countKey: "all" },
@@ -75,6 +76,16 @@ export default function AdminComplaintsPage() {
   // Determine active tab from URL query params
   const tabParam = searchParams.get("tab") || searchParams.get("status") || "all";
   const activeTab = TABS.some((t) => t.id === tabParam) ? tabParam : "all";
+
+  const [viewMode, setViewMode] = useState(
+    searchParams.get("tab") === "assignment" ? "dispatch" : "feed"
+  );
+
+  useEffect(() => {
+    if (searchParams.get("tab") === "assignment") {
+      setViewMode("dispatch");
+    }
+  }, [searchParams]);
 
   const setTab = (tabId) => {
     const next = new URLSearchParams(searchParams);
@@ -157,14 +168,60 @@ export default function AdminComplaintsPage() {
     }
   };
 
+  // If in Community Complaints Feed mode, render the shared feed with Admin role capabilities
+  if (viewMode === "feed" && tabParam !== "assignment") {
+    return (
+      <div className="space-y-2">
+        <div className="px-4 md:px-6 lg:px-8 pt-4 max-w-5xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-1.5 p-1 bg-surface-card border border-surface-border rounded-xl">
+            <button
+              onClick={() => setViewMode("feed")}
+              className="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-primary-500/20 text-primary-400 border border-primary-500/30"
+            >
+              Community Complaints Feed
+            </button>
+            <button
+              onClick={() => {
+                setViewMode("dispatch");
+                setTab("assignment");
+              }}
+              className="px-3.5 py-1.5 rounded-lg text-xs font-semibold text-gray-400 hover:text-white"
+            >
+              Workforce Dispatch Console
+            </button>
+          </div>
+        </div>
+        <CommunityComplaintsFeed role="admin" initialTab={activeTab} />
+      </div>
+    );
+  }
+
   return (
     <div className="p-4 md:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
-      {/* Header */}
+      {/* Switcher & Header */}
+      <div className="flex items-center gap-1.5 p-1 bg-surface-card border border-surface-border rounded-xl w-fit">
+        <button
+          onClick={() => {
+            setViewMode("feed");
+            setTab("all");
+          }}
+          className="px-3.5 py-1.5 rounded-lg text-xs font-semibold text-gray-400 hover:text-white"
+        >
+          Community Complaints Feed
+        </button>
+        <button
+          onClick={() => setViewMode("dispatch")}
+          className="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-primary-500/20 text-primary-400 border border-primary-500/30"
+        >
+          Workforce Dispatch Console
+        </button>
+      </div>
+
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 id="admin-complaints-title" className="font-display font-bold text-2xl text-white flex items-center gap-2.5">
             <ClipboardList className="w-6 h-6 text-primary-400" />
-            Complaints & Task Management
+            Workforce Dispatch & Assignment Console
           </h1>
           <p className="text-gray-400 text-sm mt-0.5">
             Monitor reported waste, review automatic assignments, and dispatch municipal workforce.

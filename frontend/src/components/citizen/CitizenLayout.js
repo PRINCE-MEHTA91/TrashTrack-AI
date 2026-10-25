@@ -13,6 +13,7 @@ import {
   ChevronDown,
   Trash2,
   MapPin,
+  MessageSquare,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useLocation } from "../../context/LocationContext";
@@ -22,6 +23,7 @@ const NAV_ITEMS = [
   { to: "/citizen/home", icon: Home, label: "Home" },
   { to: "/citizen/report", icon: AlertCircle, label: "Report Waste" },
   { to: "/citizen/complaints", icon: FileText, label: "My Complaints" },
+  { to: "/citizen/community", icon: MessageSquare, label: "Community Complaints" },
   { to: "/citizen/map", icon: Map, label: "Map" },
   { to: "/citizen/notifications", icon: Bell, label: "Notifications", badge: 0 },
   { to: "/citizen/profile", icon: User, label: "Profile" },

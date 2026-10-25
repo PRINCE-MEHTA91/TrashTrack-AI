@@ -8,6 +8,7 @@ import ProtectedRoute from "./components/common/ProtectedRoute";
 import WorkerLayout from "./components/worker/WorkerLayout";
 import WorkerHomePage from "./pages/worker/WorkerHomePage";
 import WorkerTasksPage from "./pages/worker/WorkerTasksPage";
+import WorkerComplaintsPage from "./pages/worker/WorkerComplaintsPage";
 import WorkerMapPage from "./pages/worker/WorkerMapPage";
 import WorkerNotificationsPage from "./pages/worker/WorkerNotificationsPage";
 import WorkerProfilePage from "./pages/worker/WorkerProfilePage";
@@ -17,6 +18,7 @@ import CitizenLayout from "./components/citizen/CitizenLayout";
 import CitizenHomePage from "./pages/citizen/CitizenHomePage";
 import CitizenReportPage from "./pages/citizen/CitizenReportPage";
 import CitizenComplaintsPage from "./pages/citizen/CitizenComplaintsPage";
+import CitizenCommunityPage from "./pages/citizen/CitizenCommunityPage";
 import CitizenMapPage from "./pages/citizen/CitizenMapPage";
 import CitizenNotificationsPage from "./pages/citizen/CitizenNotificationsPage";
 import CitizenProfilePage from "./pages/citizen/CitizenProfilePage";
@@ -54,6 +56,7 @@ function App() {
       >
         <Route path="/worker/home" element={<WorkerHomePage />} />
         <Route path="/worker/tasks" element={<WorkerTasksPage />} />
+        <Route path="/worker/complaints" element={<WorkerComplaintsPage />} />
         <Route path="/worker/map" element={<WorkerMapPage />} />
         <Route path="/worker/notifications" element={<WorkerNotificationsPage />} />
         <Route path="/worker/profile" element={<WorkerProfilePage />} />
@@ -70,6 +73,7 @@ function App() {
         <Route path="/citizen/home" element={<CitizenHomePage />} />
         <Route path="/citizen/report" element={<CitizenReportPage />} />
         <Route path="/citizen/complaints" element={<CitizenComplaintsPage />} />
+        <Route path="/citizen/community" element={<CitizenCommunityPage />} />
         <Route path="/citizen/map" element={<CitizenMapPage />} />
         <Route path="/citizen/notifications" element={<CitizenNotificationsPage />} />
         <Route path="/citizen/profile" element={<CitizenProfilePage />} />

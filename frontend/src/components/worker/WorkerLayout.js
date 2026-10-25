@@ -13,6 +13,7 @@ import {
   Trash2,
   Zap,
   MapPin,
+  MessageSquare,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useLocation } from "../../context/LocationContext";
@@ -64,6 +65,7 @@ export default function WorkerLayout() {
   const navItems = [
     { to: "/worker/home", icon: Home, label: "Home" },
     { to: "/worker/tasks", icon: ClipboardList, label: "Tasks", badge: activeTaskCount },
+    { to: "/worker/complaints", icon: MessageSquare, label: "Community Complaints" },
     { to: "/worker/map", icon: Map, label: "Map" },
     { to: "/worker/notifications", icon: Bell, label: "Notifications", badge: 0 },
     { to: "/worker/profile", icon: User, label: "Profile" },

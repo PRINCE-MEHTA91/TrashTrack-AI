@@ -15,11 +15,11 @@ import {
   Navigation,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
+import { useNotifications } from "../../context/NotificationContext";
 import { useLocation } from "../../context/LocationContext";
 import { LocationStatus, LocationSavedBadge } from "../../components/common/LocationStatus";
 import { LocationMap } from "../../components/common/LocationMap";
 import { useEffect } from "react";
-// Notifications not yet implemented — real API will be added when backend endpoint is ready
 
 import { API_URL } from "../../config/api.js";
 
@@ -30,12 +30,6 @@ const STATUS_CONFIG = {
   SUBMITTED:   { label: "Submitted",   className: "bg-gray-500/15 text-gray-400 border-gray-500/30",          icon: FileText },
 };
 
-const NOTIFICATION_TYPE_CONFIG = {
-  success: { dot: "bg-emerald-400" },
-  info:    { dot: "bg-blue-400" },
-  warning: { dot: "bg-amber-400" },
-};
-
 function getGreeting() {
   const hour = new Date().getHours();
   if (hour < 12) return "Good morning";
@@ -43,9 +37,9 @@ function getGreeting() {
   return "Good evening";
 }
 
-
 export default function CitizenHomePage() {
   const { user, getToken } = useAuth();
+  const { notifications } = useNotifications();
   const navigate = useNavigate();
   const [stats, setStats] = useState({
     totalReports: 0,
@@ -54,8 +48,6 @@ export default function CitizenHomePage() {
     resolvedReports: 0,
   });
   const [recentReports, setRecentReports] = useState([]);
-  // No mock notifications — show empty state until real API is ready
-  const notifications = [];
   const [loading, setLoading] = useState(true);
 
   // Single location state from context
@@ -378,7 +370,8 @@ function RecentReports({ reports, onViewAll }) {
   );
 }
 
-function NotificationPreview({ notifications, onViewAll }) {
+function NotificationPreview({ notifications = [], onViewAll }) {
+  const previewList = notifications.slice(0, 3);
   return (
     <div className="card p-5">
       <div className="flex items-center justify-between mb-4">
@@ -389,45 +382,54 @@ function NotificationPreview({ notifications, onViewAll }) {
         <button
           id="citizen-view-all-notifs-btn"
           onClick={onViewAll}
-          className="text-xs text-citizen-400 hover:text-citizen-300 font-medium flex items-center gap-1 transition-colors"
+          className="text-xs text-citizen-400 hover:text-citizen-300 font-medium flex items-center gap-1 transition-colors cursor-pointer"
         >
           View all
           <ChevronRight className="w-3.5 h-3.5" />
         </button>
       </div>
 
-      {notifications.length === 0 ? (
+      {previewList.length === 0 ? (
         <div className="py-10 text-center">
           <Bell className="w-8 h-8 text-gray-600 mx-auto mb-2" />
-          <p className="text-gray-500 text-sm">No notifications.</p>
+          <p className="text-gray-500 text-sm">No notifications yet.</p>
         </div>
       ) : (
         <div className="space-y-3">
-          {notifications.map((notif) => {
-            const typeConf = NOTIFICATION_TYPE_CONFIG[notif.type] ?? NOTIFICATION_TYPE_CONFIG.info;
+          {previewList.map((notif) => {
+            const isRead = !!notif.is_read;
+            const timeStr = notif.created_at
+              ? new Date(notif.created_at).toLocaleDateString([], {
+                  month: "short",
+                  day: "numeric",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })
+              : "";
             return (
               <div
                 key={notif.id}
                 id={`citizen-notif-${notif.id}`}
-                className={`flex gap-3 p-3 rounded-xl border transition-colors ${
-                  notif.read
-                    ? "bg-surface-muted border-surface-border"
+                onClick={onViewAll}
+                className={`flex gap-3 p-3 rounded-xl border transition-colors cursor-pointer hover:border-citizen-500/40 ${
+                  isRead
+                    ? "bg-surface-muted/50 border-surface-border"
                     : "bg-citizen-500/5 border-citizen-500/20"
                 }`}
               >
                 <div className="relative shrink-0 mt-1">
                   <div className="w-2 h-2 rounded-full">
-                    {!notif.read && (
-                      <span className={`block w-2 h-2 rounded-full ${typeConf.dot}`} />
+                    {!isRead && (
+                      <span className="block w-2 h-2 rounded-full bg-citizen-400" />
                     )}
                   </div>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className={`text-sm font-semibold leading-tight ${notif.read ? "text-gray-300" : "text-white"}`}>
+                  <p className={`text-sm font-semibold leading-tight ${isRead ? "text-gray-300" : "text-white"}`}>
                     {notif.title}
                   </p>
-                  <p className="text-xs text-gray-400 mt-0.5 leading-relaxed">{notif.message}</p>
-                  <p className="text-xs text-gray-600 mt-1">{notif.time}</p>
+                  <p className="text-xs text-gray-400 mt-0.5 leading-relaxed line-clamp-2">{notif.message}</p>
+                  <p className="text-[11px] text-gray-500 mt-1">{timeStr}</p>
                 </div>
               </div>
             );

@@ -18,6 +18,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
+import { useNotifications } from "../../context/NotificationContext";
 import { API_URL } from "../../config/api.js";
 
 // ── Navigation structure ──────────────────────────────────────
@@ -27,6 +28,13 @@ const NAV_GROUPS = [
     icon: LayoutDashboard,
     label: "Overview",
     to: "/admin/home",
+    single: true,
+  },
+  {
+    id: "notifications",
+    icon: Bell,
+    label: "Notifications",
+    to: "/admin/notifications",
     single: true,
   },
   {
@@ -113,7 +121,7 @@ function Avatar({ initials, size = "sm" }) {
   );
 }
 
-function NavGroup({ group, onClose, pendingCount }) {
+function NavGroup({ group, onClose, pendingCount, unreadCount = 0 }) {
   const routerLocation = useRouterLocation();
   const isGroupActive = routerLocation.pathname.startsWith(group.to);
   const [expanded, setExpanded] = useState(isGroupActive);
@@ -124,6 +132,7 @@ function NavGroup({ group, onClose, pendingCount }) {
   }, [isGroupActive]);
 
   if (group.single) {
+    const isNotifications = group.id === "notifications";
     return (
       <NavLink
         to={group.to}
@@ -138,7 +147,15 @@ function NavGroup({ group, onClose, pendingCount }) {
         }
       >
         <group.icon className="w-4.5 h-4.5 shrink-0" />
-        <span>{group.label}</span>
+        <span className="flex-1">{group.label}</span>
+        {isNotifications && unreadCount > 0 && (
+          <span
+            id="admin-sidebar-notifications-count"
+            className="px-1.5 py-0.5 rounded-full bg-primary-500 text-white text-[10px] font-bold"
+          >
+            {unreadCount > 9 ? "9+" : unreadCount}
+          </span>
+        )}
       </NavLink>
     );
   }
@@ -216,7 +233,7 @@ function NavGroup({ group, onClose, pendingCount }) {
   );
 }
 
-function SidebarContent({ onClose, pendingCount = 0 }) {
+function SidebarContent({ onClose, pendingCount = 0, unreadCount = 0 }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const initials = getInitials(user?.full_name);
@@ -255,6 +272,7 @@ function SidebarContent({ onClose, pendingCount = 0 }) {
             group={group}
             onClose={onClose}
             pendingCount={pendingCount}
+            unreadCount={unreadCount}
           />
         ))}
       </nav>
@@ -282,6 +300,7 @@ function SidebarContent({ onClose, pendingCount = 0 }) {
 
 export default function AdminLayout() {
   const { user, logout, getToken } = useAuth();
+  const { unreadCount } = useNotifications();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
@@ -358,7 +377,7 @@ export default function AdminLayout() {
     <div className="min-h-screen bg-surface flex">
       {/* ── Desktop Sidebar ── */}
       <aside className="hidden lg:flex flex-col w-64 bg-surface-card border-r border-surface-border shrink-0 fixed inset-y-0 left-0 z-30">
-        <SidebarContent pendingCount={pendingCount} />
+        <SidebarContent pendingCount={pendingCount} unreadCount={unreadCount} />
       </aside>
 
       {/* ── Mobile Overlay ── */}
@@ -375,7 +394,7 @@ export default function AdminLayout() {
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <SidebarContent onClose={() => setSidebarOpen(false)} pendingCount={pendingCount} />
+        <SidebarContent onClose={() => setSidebarOpen(false)} pendingCount={pendingCount} unreadCount={unreadCount} />
       </aside>
 
       {/* ── Main content area ── */}
@@ -432,11 +451,16 @@ export default function AdminLayout() {
           {/* Notifications */}
           <button
             id="admin-notifications-btn"
-            className="relative p-2 rounded-lg text-gray-400 hover:text-white hover:bg-surface-muted transition-all duration-200"
+            className="relative p-2 rounded-lg text-gray-400 hover:text-white hover:bg-surface-muted transition-all duration-200 cursor-pointer"
             aria-label="Notifications"
-            onClick={() => navigate("/admin/settings?tab=notifications")}
+            onClick={() => navigate("/admin/notifications")}
           >
             <Bell className="w-5 h-5" />
+            {unreadCount > 0 && (
+              <span className="absolute top-1 right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-primary-500 text-white text-[10px] flex items-center justify-center font-bold leading-none shadow-glow-sm">
+                {unreadCount > 9 ? "9+" : unreadCount}
+              </span>
+            )}
           </button>
 
           {/* Profile dropdown */}

@@ -414,7 +414,7 @@ export default function CitizenReportPage() {
 
       const data = await res.json();
       if (res.ok && data.success) {
-        navigate("/citizen/home");
+        navigate("/citizen/complaints");
       } else {
         setError(data.message || "Failed to submit report.");
       }

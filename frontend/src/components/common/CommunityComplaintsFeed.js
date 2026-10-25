@@ -26,6 +26,7 @@ import {
   RotateCcw,
   Image as ImageIcon,
   CheckCircle,
+  Trash2,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { API_URL } from "../../config/api.js";
@@ -246,6 +247,34 @@ function ComplaintDetailModal({ complaintId, role, onClose, onRefresh }) {
       setActionMessage({ type: "error", text: "Network error." });
     } finally {
       setActionLoading(false);
+    }
+  }
+
+  // Citizen Owner: Delete complaint (only permitted for creator)
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
+
+  async function handleDeleteComplaint() {
+    try {
+      setDeleteLoading(true);
+      setDeleteError("");
+      const token = getToken();
+      const res = await fetch(`${API_URL}/complaints/${complaintId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const json = await res.json();
+      if (res.ok && json.success) {
+        if (onRefresh) onRefresh();
+        onClose();
+      } else {
+        setDeleteError(json.message || "Failed to delete complaint.");
+      }
+    } catch {
+      setDeleteError("Unable to connect to the server.");
+    } finally {
+      setDeleteLoading(false);
     }
   }
 
@@ -628,6 +657,64 @@ function ComplaintDetailModal({ complaintId, role, onClose, onRefresh }) {
             </div>
           )}
 
+          {/* Citizen Owner Action: Delete Complaint (strictly only for the member who raised it) */}
+          {complaint.is_my_complaint && !["VERIFIED", "CLOSED"].includes(complaint.status) && (
+            <div className="p-4 rounded-xl bg-red-500/5 border border-red-500/20 space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs font-bold text-red-400 uppercase tracking-wider">
+                    Complaint Owner Controls
+                  </p>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    You raised this complaint. You have the exclusive option to delete it.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  id="community-modal-delete-btn"
+                  onClick={() => setShowDeleteModal(true)}
+                  className="px-3.5 py-1.5 rounded-xl bg-red-500/15 border border-red-500/30 text-red-400 hover:bg-red-500/25 transition-all text-xs font-semibold flex items-center gap-1.5 cursor-pointer shrink-0"
+                >
+                  <Trash2 className="w-3.5 h-3.5" /> Delete My Complaint
+                </button>
+              </div>
+
+              {showDeleteModal && (
+                <div className="mt-2 p-3.5 rounded-lg bg-surface-card border border-red-500/30 space-y-3 animate-fade-in">
+                  <p className="text-xs font-semibold text-red-300">
+                    Are you sure you want to permanently delete your complaint?
+                  </p>
+                  <p className="text-xs text-gray-400">
+                    This will remove the complaint from the community feed and cancel any assigned worker tasks.
+                  </p>
+                  {deleteError && (
+                    <p className="text-red-400 text-xs bg-red-500/10 p-2 rounded border border-red-500/20">{deleteError}</p>
+                  )}
+                  <div className="flex justify-end gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => setShowDeleteModal(false)}
+                      disabled={deleteLoading}
+                      className="px-3 py-1.5 rounded-lg text-xs text-gray-400 hover:text-white cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      id="community-modal-confirm-delete-btn"
+                      onClick={handleDeleteComplaint}
+                      disabled={deleteLoading}
+                      className="px-3.5 py-1.5 rounded-lg bg-red-500 text-white font-semibold text-xs hover:bg-red-600 disabled:opacity-50 flex items-center gap-1.5 shadow-sm cursor-pointer"
+                    >
+                      {deleteLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                      Confirm Delete
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Community Discussion & Comments Section */}
           <div>
             <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2.5">
@@ -867,10 +954,16 @@ function ComplaintCard({ complaint, role, onView }) {
         <button
           onClick={() => onView(complaint)}
           id={`community-complaint-view-${complaint.id?.slice(0, 8)}`}
-          className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-surface-muted hover:bg-surface-border text-gray-200 hover:text-white transition-all text-xs font-semibold border border-surface-border"
+          className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-surface-muted hover:bg-surface-border text-gray-200 hover:text-white transition-all text-xs font-semibold border border-surface-border cursor-pointer"
         >
           <Eye className="w-3.5 h-3.5" /> View Details & Timeline
         </button>
+
+        {complaint.is_my_complaint && (
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-citizen-500/10 border border-citizen-500/30 text-citizen-400 text-xs font-medium">
+            Your Report
+          </span>
+        )}
 
         {mapsUrl && (
           <a

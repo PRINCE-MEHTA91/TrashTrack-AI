@@ -6,6 +6,7 @@ import {
   getComplaintAssignmentLogs,
 } from "../services/assignment.service.js";
 import { broadcastZoneUpdate } from "../services/realtime.service.js";
+import { createNotification } from "../services/notifications.service.js";
 
 // Helper to fetch and verify admin municipality
 async function getAuthenticatedAdmin(userId) {
@@ -236,6 +237,34 @@ export const assignComplaintManually = async (req, res, next) => {
       workerId,
     });
 
+    if (result.complaint) {
+      await createNotification({
+        userId: workerId,
+        title: "New Task Assignment Offer",
+        message: `Administrator assigned complaint "${result.complaint.title || "Waste Cleanup"}" to you. Review & accept.`,
+        type: "TASK_OFFER",
+        category: "TASK",
+        relatedEntityType: "complaint",
+        relatedEntityId: complaintId,
+        actionUrl: "/worker/tasks?tab=pending",
+        dedupKey: `task_offer_${complaintId}_worker_${workerId}`,
+      });
+
+      if (result.complaint.citizen_id) {
+        await createNotification({
+          userId: result.complaint.citizen_id,
+          title: "Worker Assigned",
+          message: `Your complaint "${result.complaint.title || "Waste Cleanup"}" has been assigned to worker ${result.worker?.full_name || "Sanitation Worker"}.`,
+          type: "COMPLAINT_ASSIGNED",
+          category: "COMPLAINT",
+          relatedEntityType: "complaint",
+          relatedEntityId: complaintId,
+          actionUrl: "/citizen/complaints",
+          dedupKey: `complaint_assigned_${complaintId}_${workerId}`,
+        });
+      }
+    }
+
     return res.json(result);
   } catch (err) {
     if (err instanceof z.ZodError) {
@@ -260,6 +289,20 @@ export const triggerAutoAssign = async (req, res, next) => {
       type: "complaint_assigned",
       complaintId,
     });
+
+    if (result.assigned && result.worker) {
+      await createNotification({
+        userId: result.worker.id,
+        title: "New Task Assignment Offer",
+        message: `New task offer for complaint (${result.distance_meters ? Math.round(result.distance_meters) + "m away" : "nearby"}). Review & accept.`,
+        type: "TASK_OFFER",
+        category: "TASK",
+        relatedEntityType: "complaint",
+        relatedEntityId: complaintId,
+        actionUrl: "/worker/tasks?tab=pending",
+        dedupKey: `task_offer_${complaintId}_worker_${result.worker.id}`,
+      });
+    }
 
     return res.json(result);
   } catch (err) {

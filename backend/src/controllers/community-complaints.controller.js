@@ -1,6 +1,7 @@
 import { query } from "../config/database.js";
 import { z } from "zod";
 import { broadcastZoneUpdate } from "../services/realtime.service.js";
+import { createNotification, notifyAdminsForZone } from "../services/notifications.service.js";
 
 // Resolves zone from DB profile, GPS/PostGIS, or validated query param
 async function resolveUserZone(user, requestedMuniId = null) {
@@ -463,7 +464,7 @@ export const addComplaintComment = async (req, res, next) => {
 
     // Verify complaint exists and get its zone
     const cRes = await query(
-      `SELECT id, status, municipality_id, citizen_id, assigned_worker_id FROM complaints WHERE id = $1`,
+      `SELECT id, title, status, municipality_id, citizen_id, assigned_worker_id FROM complaints WHERE id = $1`,
       [id]
     );
 
@@ -493,6 +494,58 @@ export const addComplaintComment = async (req, res, next) => {
          WHERE id = $2`,
         [parsed.comment, id]
       );
+
+      // Notify assigned worker about incomplete report
+      if (complaint.assigned_worker_id) {
+        await createNotification({
+          userId: complaint.assigned_worker_id,
+          title: "Incomplete Cleanup Reported",
+          message: `Citizen reported incomplete cleanup on "${complaint.title}": "${parsed.comment}". Flagged for rework.`,
+          type: "INCOMPLETE_REPORT",
+          category: "TASK",
+          relatedEntityType: "complaint",
+          relatedEntityId: id,
+          actionUrl: "/worker/tasks?tab=in_progress",
+        });
+      }
+
+      // Notify zone admins
+      await notifyAdminsForZone(complaint.municipality_id, {
+        title: "Citizen Incomplete Cleanup Report",
+        message: `Citizen reported incomplete work on "${complaint.title}": "${parsed.comment}".`,
+        type: "INCOMPLETE_REPORT",
+        category: "COMPLAINT",
+        relatedEntityType: "complaint",
+        relatedEntityId: id,
+        actionUrl: "/admin/complaints",
+      });
+    } else {
+      // Regular comment: notify citizen if someone else commented
+      if (complaint.citizen_id && userId !== complaint.citizen_id) {
+        await createNotification({
+          userId: complaint.citizen_id,
+          title: "New Response to Your Complaint",
+          message: `A new comment was posted on "${complaint.title}": "${parsed.comment}"`,
+          type: "COMMENT_ADDED",
+          category: "COMPLAINT",
+          relatedEntityType: "complaint",
+          relatedEntityId: id,
+          actionUrl: "/citizen/complaints",
+        });
+      }
+      // Notify assigned worker if someone else commented
+      if (complaint.assigned_worker_id && userId !== complaint.assigned_worker_id) {
+        await createNotification({
+          userId: complaint.assigned_worker_id,
+          title: "New Comment on Assigned Task",
+          message: `A new comment was posted on "${complaint.title}": "${parsed.comment}"`,
+          type: "COMMENT_ADDED",
+          category: "TASK",
+          relatedEntityType: "complaint",
+          relatedEntityId: id,
+          actionUrl: "/worker/tasks",
+        });
+      }
     }
 
     // Broadcast real-time zone update
@@ -533,7 +586,7 @@ export const verifyComplaintWork = async (req, res, next) => {
     const adminId = req.user.userId;
 
     const cRes = await query(
-      `SELECT id, status, municipality_id FROM complaints WHERE id = $1`,
+      `SELECT id, title, status, municipality_id, citizen_id, assigned_worker_id FROM complaints WHERE id = $1`,
       [id]
     );
 
@@ -576,6 +629,36 @@ export const verifyComplaintWork = async (req, res, next) => {
       status: "VERIFIED",
     });
 
+    // Notify assigned worker that cleanup was verified
+    if (complaint.assigned_worker_id) {
+      await createNotification({
+        userId: complaint.assigned_worker_id,
+        title: "Work Verified by Administration",
+        message: `Your cleanup work on "${complaint.title}" has been verified and approved by administration.`,
+        type: "COMPLAINT_VERIFIED",
+        category: "TASK",
+        relatedEntityType: "complaint",
+        relatedEntityId: id,
+        actionUrl: "/worker/tasks?tab=completed",
+        dedupKey: `verified_${id}`,
+      });
+    }
+
+    // Notify citizen that cleanup was inspected and verified
+    if (complaint.citizen_id) {
+      await createNotification({
+        userId: complaint.citizen_id,
+        title: "Complaint Resolution Verified",
+        message: `Administration has verified the completed cleanup of "${complaint.title}".`,
+        type: "COMPLAINT_VERIFIED",
+        category: "COMPLAINT",
+        relatedEntityType: "complaint",
+        relatedEntityId: id,
+        actionUrl: "/citizen/complaints",
+        dedupKey: `verified_${id}`,
+      });
+    }
+
     return res.json({
       success: true,
       message: "Complaint resolution verified successfully.",
@@ -603,7 +686,7 @@ export const requestComplaintAction = async (req, res, next) => {
     const adminId = req.user.userId;
 
     const cRes = await query(
-      `SELECT id, status, municipality_id FROM complaints WHERE id = $1`,
+      `SELECT id, title, status, municipality_id, citizen_id, assigned_worker_id FROM complaints WHERE id = $1`,
       [id]
     );
 
@@ -634,6 +717,34 @@ export const requestComplaintAction = async (req, res, next) => {
       complaintId: id,
       status: targetStatus,
     });
+
+    // Notify assigned worker that rework was requested
+    if (complaint.assigned_worker_id) {
+      await createNotification({
+        userId: complaint.assigned_worker_id,
+        title: "Action / Rework Requested by Admin",
+        message: `Administrator requested rework on "${complaint.title}": "${notes}"`,
+        type: "REWORK_REQUESTED",
+        category: "TASK",
+        relatedEntityType: "complaint",
+        relatedEntityId: id,
+        actionUrl: "/worker/tasks?tab=in_progress",
+      });
+    }
+
+    // Notify citizen that administrator reopened complaint for rework
+    if (complaint.citizen_id) {
+      await createNotification({
+        userId: complaint.citizen_id,
+        title: "Complaint Reopened for Rework",
+        message: `Administrator reviewed "${complaint.title}" and requested further cleanup action.`,
+        type: "REWORK_REQUESTED",
+        category: "COMPLAINT",
+        relatedEntityType: "complaint",
+        relatedEntityId: id,
+        actionUrl: "/citizen/complaints",
+      });
+    }
 
     return res.json({
       success: true,

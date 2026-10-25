@@ -31,6 +31,7 @@ import AdminWorkforcePage from "./pages/admin/AdminWorkforcePage";
 import AdminMunicipalPage from "./pages/admin/AdminMunicipalPage";
 import AdminReportsPage from "./pages/admin/AdminReportsPage";
 import AdminSettingsPage from "./pages/admin/AdminSettingsPage";
+import AdminNotificationsPage from "./pages/admin/AdminNotificationsPage";
 
 function App() {
   return (
@@ -91,8 +92,9 @@ function App() {
         <Route path="/admin/complaints" element={<AdminComplaintsPage />} />
         <Route path="/admin/workforce"  element={<AdminWorkforcePage />} />
         <Route path="/admin/municipal"  element={<AdminMunicipalPage />} />
-        <Route path="/admin/reports"    element={<AdminReportsPage />} />
-        <Route path="/admin/settings"   element={<AdminSettingsPage />} />
+        <Route path="/admin/reports"       element={<AdminReportsPage />} />
+        <Route path="/admin/notifications" element={<AdminNotificationsPage />} />
+        <Route path="/admin/settings"      element={<AdminSettingsPage />} />
       </Route>
 
       {/* ── Fallback: redirect unknown routes to login ── */}

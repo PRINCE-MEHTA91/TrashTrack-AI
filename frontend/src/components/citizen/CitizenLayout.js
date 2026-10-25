@@ -17,17 +17,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useLocation } from "../../context/LocationContext";
-// Notification badge will be driven by real API — mock removed
-
-const NAV_ITEMS = [
-  { to: "/citizen/home", icon: Home, label: "Home" },
-  { to: "/citizen/report", icon: AlertCircle, label: "Report Waste" },
-  { to: "/citizen/complaints", icon: FileText, label: "My Complaints" },
-  { to: "/citizen/community", icon: MessageSquare, label: "Community Complaints" },
-  { to: "/citizen/map", icon: Map, label: "Map" },
-  { to: "/citizen/notifications", icon: Bell, label: "Notifications", badge: 0 },
-  { to: "/citizen/profile", icon: User, label: "Profile" },
-];
+import { useNotifications } from "../../context/NotificationContext";
 
 function getInitials(name = "") {
   return name
@@ -40,11 +30,22 @@ function getInitials(name = "") {
 
 export default function CitizenLayout() {
   const { user, logout } = useAuth();
+  const { unreadCount } = useNotifications();
   const { displayLabel, refreshLocation, status: locStatus } = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const profileRef = useRef(null);
+
+  const navItems = [
+    { to: "/citizen/home", icon: Home, label: "Home" },
+    { to: "/citizen/report", icon: AlertCircle, label: "Report Waste" },
+    { to: "/citizen/complaints", icon: FileText, label: "My Complaints" },
+    { to: "/citizen/community", icon: MessageSquare, label: "Community Complaints" },
+    { to: "/citizen/map", icon: Map, label: "Map" },
+    { to: "/citizen/notifications", icon: Bell, label: "Notifications", badge: unreadCount },
+    { to: "/citizen/profile", icon: User, label: "Profile" },
+  ];
 
   const initials = getInitials(user?.full_name);
 
@@ -90,7 +91,7 @@ export default function CitizenLayout() {
 
         {/* Nav */}
         <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-          {NAV_ITEMS.map(({ to, icon: Icon, label, badge }) => (
+          {navItems.map(({ to, icon: Icon, label, badge }) => (
             <NavLink
               key={to}
               to={to}
@@ -169,7 +170,7 @@ export default function CitizenLayout() {
         </div>
 
         <nav className="px-3 py-4 space-y-1">
-          {NAV_ITEMS.map(({ to, icon: Icon, label, badge }) => (
+          {navItems.map(({ to, icon: Icon, label, badge }) => (
             <NavLink
               key={to}
               to={to}
@@ -248,14 +249,14 @@ export default function CitizenLayout() {
           {/* Notifications */}
           <button
             id="citizen-notifications-btn"
-            className="relative p-2 rounded-lg text-gray-400 hover:text-white hover:bg-surface-muted transition-all duration-200"
+            className="relative p-2 rounded-lg text-gray-400 hover:text-white hover:bg-surface-muted transition-all duration-200 cursor-pointer"
             aria-label="Notifications"
             onClick={() => navigate("/citizen/notifications")}
           >
             <Bell className="w-5 h-5" />
-            {false && (
-              <span className="absolute top-1 right-1 w-4 h-4 rounded-full bg-citizen-500 text-white text-xs flex items-center justify-center font-bold leading-none">
-                {0}
+            {unreadCount > 0 && (
+              <span className="absolute top-1 right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-citizen-500 text-white text-[10px] flex items-center justify-center font-bold leading-none shadow-glow-sm">
+                {unreadCount > 9 ? "9+" : unreadCount}
               </span>
             )}
           </button>
@@ -333,7 +334,7 @@ export default function CitizenLayout() {
           aria-label="Bottom navigation"
         >
           <div className="flex items-center justify-around py-2">
-            {NAV_ITEMS.map(({ to, icon: Icon, label, badge }) => (
+            {navItems.map(({ to, icon: Icon, label, badge }) => (
               <NavLink
                 key={to}
                 to={to}

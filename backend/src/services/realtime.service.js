@@ -4,6 +4,8 @@ import { query } from "../config/database.js";
 
 // Map: municipalityId (UUID string or '__UNASSIGNED__') -> Set of response streams
 const zoneClients = new Map();
+// Map: userId (UUID string) -> Set of response streams
+const userClients = new Map();
 
 // Register client response stream for a municipality
 export function registerSSEClient(municipalityKey, res) {
@@ -20,6 +22,71 @@ export function registerSSEClient(municipalityKey, res) {
       if (clients.size === 0) {
         zoneClients.delete(key);
       }
+    }
+  });
+}
+
+// Register client response stream for a specific authenticated user
+export function registerUserSSEClient(userId, res) {
+  if (!userId) return;
+  const key = String(userId);
+  if (!userClients.has(key)) {
+    userClients.set(key, new Set());
+  }
+  userClients.get(key).add(res);
+
+  res.on("close", () => {
+    const clients = userClients.get(key);
+    if (clients) {
+      clients.delete(res);
+      if (clients.size === 0) {
+        userClients.delete(key);
+      }
+    }
+  });
+}
+
+// Send real-time notification to a specific user
+export function sendUserNotification(userId, notification, unreadCount = null) {
+  if (!userId) return;
+  const clients = userClients.get(String(userId));
+  if (!clients || clients.size === 0) return;
+
+  const payload = {
+    type: "notification_received",
+    notification,
+    unreadCount,
+    timestamp: new Date().toISOString(),
+  };
+  const message = `data: ${JSON.stringify(payload)}\n\n`;
+
+  clients.forEach((client) => {
+    try {
+      client.write(message);
+    } catch (err) {
+      console.error("Error writing user notification SSE:", err);
+    }
+  });
+}
+
+// Send unread badge count update to a specific user
+export function sendUserBadgeUpdate(userId, unreadCount) {
+  if (!userId) return;
+  const clients = userClients.get(String(userId));
+  if (!clients || clients.size === 0) return;
+
+  const payload = {
+    type: "unread_count_updated",
+    unreadCount,
+    timestamp: new Date().toISOString(),
+  };
+  const message = `data: ${JSON.stringify(payload)}\n\n`;
+
+  clients.forEach((client) => {
+    try {
+      client.write(message);
+    } catch (err) {
+      console.error("Error writing user badge SSE:", err);
     }
   });
 }
@@ -123,6 +190,7 @@ export async function handleSSEConnection(req, res) {
     );
 
     registerSSEClient(resolvedMuniId, res);
+    registerUserSSEClient(userId, res);
 
     // Keep-alive heartbeat every 25 seconds
     const interval = setInterval(() => {

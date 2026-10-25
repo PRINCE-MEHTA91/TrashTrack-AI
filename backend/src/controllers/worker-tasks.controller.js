@@ -5,6 +5,7 @@ import {
   rejectWorkerTaskAssignment,
 } from "../services/assignment.service.js";
 import { broadcastZoneUpdate } from "../services/realtime.service.js";
+import { createNotification, notifyAdminsForZone } from "../services/notifications.service.js";
 
 // Live task counts by category
 export async function getWorkerTaskCounts(workerId) {
@@ -246,7 +247,10 @@ export const startWorkerTask = async (req, res, next) => {
 
     // Check task existence and ownership
     const checkRes = await query(
-      `SELECT id, status, assigned_worker_id FROM complaints WHERE id = $1`,
+      `SELECT c.id, c.title, c.status, c.citizen_id, c.municipality_id, c.assigned_worker_id, u.full_name AS worker_name
+       FROM complaints c
+       LEFT JOIN users u ON u.id = c.assigned_worker_id
+       WHERE c.id = $1`,
       [id]
     );
 
@@ -297,18 +301,44 @@ export const startWorkerTask = async (req, res, next) => {
     );
 
     const counts = await getWorkerTaskCounts(workerId);
+    const updatedTask = updateRes.rows[0];
 
-    broadcastZoneUpdate(updateRes.rows[0]?.municipality_id, {
+    broadcastZoneUpdate(updatedTask?.municipality_id, {
       type: "task_started",
       complaintId: id,
       workerId,
       status: "IN_PROGRESS",
     });
 
+    if (task.citizen_id) {
+      await createNotification({
+        userId: task.citizen_id,
+        title: "Cleanup Started",
+        message: `Worker ${task.worker_name || "Assigned Worker"} has started cleanup work on "${task.title}".`,
+        type: "TASK_STARTED",
+        category: "TASK",
+        relatedEntityType: "complaint",
+        relatedEntityId: id,
+        actionUrl: "/citizen/complaints",
+        dedupKey: `task_started_${id}`,
+      });
+    }
+
+    await notifyAdminsForZone(updatedTask?.municipality_id, {
+      title: "Task In Progress",
+      message: `Worker ${task.worker_name || "Assigned Worker"} started work on "${task.title}".`,
+      type: "TASK_STARTED",
+      category: "TASK",
+      relatedEntityType: "complaint",
+      relatedEntityId: id,
+      actionUrl: "/admin/complaints",
+      dedupKeyPrefix: `task_started_${id}`,
+    });
+
     res.json({
       success: true,
       message: "Task started successfully and moved to In Progress.",
-      task: updateRes.rows[0],
+      task: updatedTask,
       counts,
     });
   } catch (err) {
@@ -328,7 +358,10 @@ export const updateTaskProgress = async (req, res, next) => {
     const parsed = progressSchema.parse(req.body);
 
     const checkRes = await query(
-      `SELECT id, status, assigned_worker_id, resolution_note FROM complaints WHERE id = $1`,
+      `SELECT c.id, c.title, c.status, c.citizen_id, c.assigned_worker_id, c.resolution_note, u.full_name AS worker_name
+       FROM complaints c
+       LEFT JOIN users u ON u.id = c.assigned_worker_id
+       WHERE c.id = $1`,
       [id]
     );
 
@@ -372,6 +405,19 @@ export const updateTaskProgress = async (req, res, next) => {
       workerId,
     });
 
+    if (task.citizen_id) {
+      await createNotification({
+        userId: task.citizen_id,
+        title: "Progress Update on Your Complaint",
+        message: `Worker update on "${task.title}": "${parsed.note}"`,
+        type: "PROGRESS_UPDATE",
+        category: "TASK",
+        relatedEntityType: "complaint",
+        relatedEntityId: id,
+        actionUrl: "/citizen/complaints",
+      });
+    }
+
     res.json({
       success: true,
       message: "Progress updated successfully.",
@@ -399,7 +445,10 @@ export const completeWorkerTask = async (req, res, next) => {
     const parsed = completeSchema.parse(req.body);
 
     const checkRes = await query(
-      `SELECT id, status, assigned_worker_id, resolution_note FROM complaints WHERE id = $1`,
+      `SELECT c.id, c.title, c.status, c.citizen_id, c.municipality_id, c.assigned_worker_id, c.resolution_note, u.full_name AS worker_name
+       FROM complaints c
+       LEFT JOIN users u ON u.id = c.assigned_worker_id
+       WHERE c.id = $1`,
       [id]
     );
 
@@ -448,18 +497,46 @@ export const completeWorkerTask = async (req, res, next) => {
     );
 
     const counts = await getWorkerTaskCounts(workerId);
+    const updatedComplaint = updateRes.rows[0];
 
-    broadcastZoneUpdate(updateRes.rows[0]?.municipality_id, {
+    broadcastZoneUpdate(updatedComplaint?.municipality_id, {
       type: "complaint_resolved",
       complaintId: id,
       workerId,
       status: "RESOLVED",
     });
 
+    // 1. Notify authorized Admins that completion requires verification
+    await notifyAdminsForZone(updatedComplaint?.municipality_id, {
+      title: "Task Completed - Verification Required",
+      message: `Worker ${task.worker_name || "Sanitation Worker"} completed cleanup on "${task.title}". Photo submitted for verification.`,
+      type: "TASK_COMPLETED",
+      category: "COMPLAINT",
+      relatedEntityType: "complaint",
+      relatedEntityId: id,
+      actionUrl: "/admin/complaints?status=resolved",
+      dedupKeyPrefix: `task_completed_${id}`,
+    });
+
+    // 2. Notify Citizen
+    if (task.citizen_id) {
+      await createNotification({
+        userId: task.citizen_id,
+        title: "Cleanup Completed",
+        message: `Worker ${task.worker_name || "Sanitation Worker"} completed work on your complaint "${task.title}". Completion photo submitted for verification.`,
+        type: "TASK_COMPLETED",
+        category: "COMPLAINT",
+        relatedEntityType: "complaint",
+        relatedEntityId: id,
+        actionUrl: "/citizen/complaints",
+        dedupKey: `task_completed_${id}`,
+      });
+    }
+
     res.json({
       success: true,
       message: "Task successfully marked as completed!",
-      task: updateRes.rows[0],
+      task: updatedComplaint,
       counts,
     });
   } catch (err) {
@@ -613,6 +690,41 @@ export const acceptTaskOffer = async (req, res, next) => {
       complaintId: id,
       workerId,
     });
+
+    const compRes = await query(
+      `SELECT c.id, c.title, c.citizen_id, c.municipality_id, u.full_name AS worker_name
+       FROM complaints c
+       LEFT JOIN users u ON u.id = $2
+       WHERE c.id = $1`,
+      [id, workerId]
+    );
+    const cData = compRes.rows[0];
+    if (cData) {
+      if (cData.citizen_id) {
+        await createNotification({
+          userId: cData.citizen_id,
+          title: "Worker Accepted Task",
+          message: `Worker ${cData.worker_name || "Sanitation Worker"} accepted your complaint "${cData.title}". Cleanup will begin shortly.`,
+          type: "TASK_ACCEPTED",
+          category: "TASK",
+          relatedEntityType: "complaint",
+          relatedEntityId: id,
+          actionUrl: "/citizen/complaints",
+          dedupKey: `task_accepted_${id}`,
+        });
+      }
+      await notifyAdminsForZone(cData.municipality_id, {
+        title: "Task Offer Accepted",
+        message: `Worker ${cData.worker_name || "Sanitation Worker"} accepted task offer for "${cData.title}".`,
+        type: "TASK_ACCEPTED",
+        category: "TASK",
+        relatedEntityType: "complaint",
+        relatedEntityId: id,
+        actionUrl: "/admin/complaints",
+        dedupKeyPrefix: `task_accepted_${id}`,
+      });
+    }
+
     return res.json({
       ...result,
       counts,
@@ -663,6 +775,53 @@ export const rejectTaskOffer = async (req, res, next) => {
       complaintId: id,
       workerId,
     });
+
+    const compRes = await query(
+      `SELECT c.id, c.title, c.citizen_id, c.municipality_id, u.full_name AS worker_name
+       FROM complaints c
+       LEFT JOIN users u ON u.id = $2
+       WHERE c.id = $1`,
+      [id, workerId]
+    );
+    const cData = compRes.rows[0];
+    if (cData) {
+      if (result.reassigned && result.next_worker) {
+        await createNotification({
+          userId: result.next_worker.id,
+          title: "New Task Assignment Offer",
+          message: `New task offer for "${cData.title}". Review & accept.`,
+          type: "TASK_OFFER",
+          category: "TASK",
+          relatedEntityType: "complaint",
+          relatedEntityId: id,
+          actionUrl: "/worker/tasks?tab=pending",
+          dedupKey: `task_offer_${id}_worker_${result.next_worker.id}`,
+        });
+
+        await notifyAdminsForZone(cData.municipality_id, {
+          title: "Task Offer Rejected & Reassigned",
+          message: `Worker ${cData.worker_name || "Worker"} rejected offer (${reason}). Sequential reassignment matched ${result.next_worker.full_name}.`,
+          type: "TASK_REJECTED",
+          category: "TASK",
+          relatedEntityType: "complaint",
+          relatedEntityId: id,
+          actionUrl: "/admin/complaints",
+          dedupKeyPrefix: `task_rejected_${id}_${workerId}`,
+        });
+      } else {
+        await notifyAdminsForZone(cData.municipality_id, {
+          title: "Task Rejected - Requires Manual Assignment",
+          message: `Worker ${cData.worker_name || "Worker"} rejected offer (${reason}). No further eligible workers in radius.`,
+          type: "TASK_REJECTED",
+          category: "TASK",
+          relatedEntityType: "complaint",
+          relatedEntityId: id,
+          actionUrl: "/admin/complaints?tab=assignment",
+          dedupKeyPrefix: `task_rejected_${id}_${workerId}`,
+        });
+      }
+    }
+
     return res.json({
       ...result,
       counts,

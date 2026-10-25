@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useLocation } from "../../context/LocationContext";
+import { useNotifications } from "../../context/NotificationContext";
 import { API_URL } from "../../config/api.js";
 import WorkerAvailabilityToggle from "./WorkerAvailabilityToggle";
 import TaskOfferPopup from "./TaskOfferPopup";
@@ -32,6 +33,7 @@ function getInitials(name = "") {
 
 export default function WorkerLayout() {
   const { user, logout, getToken } = useAuth();
+  const { unreadCount } = useNotifications();
   const { displayLabel, refreshLocation, status: locStatus } = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -67,7 +69,7 @@ export default function WorkerLayout() {
     { to: "/worker/tasks", icon: ClipboardList, label: "Tasks", badge: activeTaskCount },
     { to: "/worker/complaints", icon: MessageSquare, label: "Community Complaints" },
     { to: "/worker/map", icon: Map, label: "Map" },
-    { to: "/worker/notifications", icon: Bell, label: "Notifications", badge: 0 },
+    { to: "/worker/notifications", icon: Bell, label: "Notifications", badge: unreadCount },
     { to: "/worker/profile", icon: User, label: "Profile" },
   ];
 
@@ -261,14 +263,14 @@ export default function WorkerLayout() {
           {/* Notifications */}
           <button
             id="worker-notifications-btn"
-            className="relative p-2 rounded-lg text-gray-400 hover:text-white hover:bg-surface-muted transition-all duration-200"
+            className="relative p-2 rounded-lg text-gray-400 hover:text-white hover:bg-surface-muted transition-all duration-200 cursor-pointer"
             aria-label="Notifications"
             onClick={() => navigate("/worker/notifications")}
           >
             <Bell className="w-5 h-5" />
-            {false && (
-              <span className="absolute top-1 right-1 w-4 h-4 rounded-full bg-primary-500 text-white text-xs flex items-center justify-center font-bold leading-none">
-                {0}
+            {unreadCount > 0 && (
+              <span className="absolute top-1 right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-primary-500 text-white text-[10px] flex items-center justify-center font-bold leading-none shadow-glow-sm">
+                {unreadCount > 9 ? "9+" : unreadCount}
               </span>
             )}
           </button>

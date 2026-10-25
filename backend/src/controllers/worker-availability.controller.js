@@ -1,4 +1,5 @@
 import { query } from "../config/database.js";
+import { createNotification } from "../services/notifications.service.js";
 
 /**
  * Format duration in seconds into short human-readable string (e.g. "7 hrs 15 mins", "45 mins")
@@ -414,6 +415,17 @@ export const toggleWorkerAvailability = async (req, res, next) => {
 
       const summary = await getWorkerTodaySummary(workerId);
 
+      await createNotification({
+        userId: workerId,
+        title: "Duty Status: On Duty",
+        message: "You are now ON DUTY and available to receive nearby waste cleanup task offers.",
+        type: "AVAILABILITY_CHANGED",
+        category: "WORKFORCE",
+        relatedEntityType: "user",
+        relatedEntityId: workerId,
+        actionUrl: "/worker/home",
+      });
+
       return res.json({
         success: true,
         availability_status: "ACTIVE",
@@ -468,6 +480,17 @@ export const toggleWorkerAvailability = async (req, res, next) => {
       await query("COMMIT");
 
       const summary = await getWorkerTodaySummary(workerId);
+
+      await createNotification({
+        userId: workerId,
+        title: "Duty Status: Off Duty",
+        message: "You are now OFF DUTY and will not receive new task assignments.",
+        type: "AVAILABILITY_CHANGED",
+        category: "WORKFORCE",
+        relatedEntityType: "user",
+        relatedEntityId: workerId,
+        actionUrl: "/worker/home",
+      });
 
       return res.json({
         success: true,

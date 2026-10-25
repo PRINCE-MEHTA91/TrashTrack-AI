@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { verifyToken, requireRole } from "../middleware/auth.middleware.js";
-import { createComplaint, getMyComplaints } from "../controllers/complaints.controller.js";
+import { createComplaint, getMyComplaints, deleteComplaint } from "../controllers/complaints.controller.js";
 import {
   getCommunityComplaints,
   getComplaintDetails,
@@ -30,5 +30,6 @@ router.post("/:id/request-action", requireRole(["admin"]), requestComplaintActio
 // ── Citizen-specific complaint routes ──
 router.post("/", requireRole(["citizen"]), createComplaint);
 router.get("/me", requireRole(["citizen"]), getMyComplaints);
+router.delete("/:id", requireRole(["citizen"]), deleteComplaint);
 
 export default router;

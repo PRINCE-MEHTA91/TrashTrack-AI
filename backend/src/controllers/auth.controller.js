@@ -2,6 +2,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { z } from "zod";
 import { query } from "../config/database.js";
+import { notifyAdminsForZone } from "../services/notifications.service.js";
 // Generate a JWT for the given user containing userId and role.
 const generateToken = (user) => {
   return jwt.sign(
@@ -107,6 +108,19 @@ export const signup = async (req, res, next) => {
     }
 
     await query("COMMIT");
+
+    if (parsed.role === "worker") {
+      await notifyAdminsForZone(requestedMunicipalityId, {
+        title: "New Worker Registration",
+        message: `Worker ${user.full_name} registered and requested verification approval.`,
+        type: "WORKER_REGISTERED",
+        category: "WORKFORCE",
+        relatedEntityType: "worker_approval",
+        relatedEntityId: user.id,
+        actionUrl: "/admin/workforce?tab=approvals",
+        dedupKeyPrefix: `worker_reg_${user.id}`,
+      });
+    }
 
     const token = generateToken(user);
 

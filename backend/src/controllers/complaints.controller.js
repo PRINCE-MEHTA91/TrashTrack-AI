@@ -2,6 +2,7 @@ import { z } from "zod";
 import { query } from "../config/database.js";
 import { assignComplaintToNearestWorker } from "../services/assignment.service.js";
 import { broadcastZoneUpdate } from "../services/realtime.service.js";
+import { createNotification, notifyAdminsForZone } from "../services/notifications.service.js";
 
 const complaintSchema = z.object({
   title: z.string().min(3),
@@ -131,6 +132,70 @@ export const createComplaint = async (req, res, next) => {
       title: finalComplaint.title,
     });
 
+    // 1. Notify the citizen who submitted the complaint
+    await createNotification({
+      userId: citizenId,
+      title: "Complaint Submitted",
+      message: `Your complaint "${finalComplaint.title}" was submitted successfully.`,
+      type: "COMPLAINT_SUBMITTED",
+      category: "COMPLAINT",
+      relatedEntityType: "complaint",
+      relatedEntityId: finalComplaint.id,
+      actionUrl: "/citizen/complaints",
+      dedupKey: `complaint_submitted_${finalComplaint.id}`,
+    });
+
+    // 2. Notify authorized administrators for this zone
+    await notifyAdminsForZone(finalComplaint.municipality_id, {
+      title: "New Citizen Complaint",
+      message: `New complaint "${finalComplaint.title}" reported in ${finalComplaint.ward_name || finalComplaint.municipality_name || "your zone"}.`,
+      type: "NEW_COMPLAINT",
+      category: "COMPLAINT",
+      relatedEntityType: "complaint",
+      relatedEntityId: finalComplaint.id,
+      actionUrl: "/admin/complaints",
+      dedupKeyPrefix: `new_complaint_${finalComplaint.id}`,
+    });
+
+    // 3. If auto-assigned, notify assigned worker and update citizen
+    if (assignment.assigned && finalComplaint.assigned_worker_id) {
+      await createNotification({
+        userId: finalComplaint.assigned_worker_id,
+        title: "New Task Assignment Offer",
+        message: `New task offer for "${finalComplaint.title}" (${assignment.distance_meters ? Math.round(assignment.distance_meters) + "m away" : "nearby"}). Review & accept.`,
+        type: "TASK_OFFER",
+        category: "TASK",
+        relatedEntityType: "complaint",
+        relatedEntityId: finalComplaint.id,
+        actionUrl: "/worker/tasks?tab=pending",
+        dedupKey: `task_offer_${finalComplaint.id}_worker_${finalComplaint.assigned_worker_id}`,
+      });
+
+      await createNotification({
+        userId: citizenId,
+        title: "Worker Assigned",
+        message: `Your complaint "${finalComplaint.title}" has been assigned to worker ${finalComplaint.worker_name || "Sanitation Worker"}.`,
+        type: "COMPLAINT_ASSIGNED",
+        category: "COMPLAINT",
+        relatedEntityType: "complaint",
+        relatedEntityId: finalComplaint.id,
+        actionUrl: "/citizen/complaints",
+        dedupKey: `complaint_assigned_${finalComplaint.id}`,
+      });
+    } else if (!assignment.assigned) {
+      // If unassigned, notify admins that manual assignment is needed
+      await notifyAdminsForZone(finalComplaint.municipality_id, {
+        title: "Unassigned Complaint Alert",
+        message: `Complaint "${finalComplaint.title}" has no available worker in service radius. Requires manual assignment.`,
+        type: "UNASSIGNED_COMPLAINT",
+        category: "COMPLAINT",
+        relatedEntityType: "complaint",
+        relatedEntityId: finalComplaint.id,
+        actionUrl: "/admin/complaints?tab=assignment",
+        dedupKeyPrefix: `unassigned_alert_${finalComplaint.id}`,
+      });
+    }
+
     res.status(201).json({
       success: true,
       complaint: finalComplaint,
@@ -171,3 +236,80 @@ export const getMyComplaints = async (req, res, next) => {
     next(err);
   }
 };
+
+// DELETE /api/v1/complaints/:id - Delete a complaint (strictly only by the citizen who raised it)
+export const deleteComplaint = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.userId;
+
+    // Verify complaint exists
+    const checkRes = await query(
+      `SELECT c.id, c.citizen_id, c.title, c.status, c.municipality_id, c.assigned_worker_id
+       FROM complaints c
+       WHERE c.id = $1`,
+      [id]
+    );
+
+    if (checkRes.rows.length === 0) {
+      return res.status(404).json({ success: false, message: "Complaint not found." });
+    }
+
+    const complaint = checkRes.rows[0];
+
+    // Ownership check: strictly only the citizen who raised the complaint can delete it
+    if (complaint.citizen_id !== userId) {
+      return res.status(403).json({
+        success: false,
+        message: "Forbidden: You can only delete complaints that you created.",
+      });
+    }
+
+    // Do not allow deleting if the complaint was already verified or closed
+    if (["VERIFIED", "CLOSED"].includes(complaint.status)) {
+      return res.status(400).json({
+        success: false,
+        message: "Cannot delete a complaint that has already been verified and closed.",
+      });
+    }
+
+    // 1. Remove notifications associated with this complaint
+    await query(
+      `DELETE FROM notifications 
+       WHERE related_entity_type = 'complaint' AND related_entity_id = $1`,
+      [id]
+    );
+
+    // 2. If a worker was assigned, notify them that the task was cancelled by the citizen
+    if (complaint.assigned_worker_id) {
+      await createNotification({
+        userId: complaint.assigned_worker_id,
+        title: "Task Cancelled by Citizen",
+        message: `Complaint "${complaint.title}" was removed by the citizen who submitted it.`,
+        type: "TASK_CANCELLED",
+        category: "TASK",
+        actionUrl: "/worker/tasks",
+        dedupKey: `task_cancelled_${id}_worker_${complaint.assigned_worker_id}`,
+      });
+    }
+
+    // 3. Delete the complaint (complaint_assignment_logs and complaint_comments cascade automatically)
+    await query(`DELETE FROM complaints WHERE id = $1`, [id]);
+
+    // 4. Broadcast zone update via SSE so live feeds refresh in real-time
+    broadcastZoneUpdate(complaint.municipality_id, {
+      type: "complaint_deleted",
+      complaintId: id,
+      municipalityId: complaint.municipality_id,
+    });
+
+    return res.json({
+      success: true,
+      message: "Complaint successfully deleted.",
+      deletedId: id,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+

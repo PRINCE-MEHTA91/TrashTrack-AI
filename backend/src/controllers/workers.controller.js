@@ -1,5 +1,6 @@
 import { query } from "../config/database.js";
 import { z } from "zod";
+import { createNotification } from "../services/notifications.service.js";
 
 /**
  * Helper to fetch and verify the authenticated admin and their assigned municipality.
@@ -502,6 +503,18 @@ export const approveWorker = async (req, res, next) => {
 
     await query("COMMIT");
 
+    await createNotification({
+      userId: workerId,
+      title: "Worker Profile Approved!",
+      message: "Your registration has been approved by the municipal administration. You can now go on duty and receive task assignments.",
+      type: "WORKER_APPROVED",
+      category: "WORKFORCE",
+      relatedEntityType: "worker_approval",
+      relatedEntityId: workerId,
+      actionUrl: "/worker/home",
+      dedupKey: `worker_approved_${workerId}`,
+    });
+
     return res.json({
       success: true,
       message: `Worker ${worker.full_name} has been approved and assigned to active duty.`,
@@ -592,6 +605,18 @@ export const rejectWorker = async (req, res, next) => {
 
     await query("COMMIT");
 
+    await createNotification({
+      userId: workerId,
+      title: "Worker Registration Rejected",
+      message: `Your registration request was rejected by administration. Reason: ${reason}`,
+      type: "WORKER_REJECTED",
+      category: "WORKFORCE",
+      relatedEntityType: "worker_approval",
+      relatedEntityId: workerId,
+      actionUrl: "/worker/profile",
+      dedupKey: `worker_rejected_${workerId}`,
+    });
+
     return res.json({
       success: true,
       message: `Worker registration for ${worker.full_name} has been rejected.`,
@@ -660,6 +685,18 @@ export const assignComplaintToWorker = async (req, res, next) => {
        RETURNING *`,
       [workerId, complaintId]
     );
+
+    await createNotification({
+      userId: workerId,
+      title: "New Task Assignment Offer",
+      message: `Administrator assigned complaint "${complaint.title}" to you. Review & accept.`,
+      type: "TASK_OFFER",
+      category: "TASK",
+      relatedEntityType: "complaint",
+      relatedEntityId: complaintId,
+      actionUrl: "/worker/tasks?tab=pending",
+      dedupKey: `task_offer_${complaintId}_worker_${workerId}`,
+    });
 
     return res.json({
       success: true,

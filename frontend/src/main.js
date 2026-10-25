@@ -5,14 +5,17 @@ import "./index.css";
 import App from "./App.js";
 import { AuthProvider } from "./context/AuthContext.js";
 import { LocationProvider } from "./context/LocationContext.js";
+import { NotificationProvider } from "./context/NotificationContext.js";
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
     <BrowserRouter>
       <AuthProvider>
-        <LocationProvider>
-          <App />
-        </LocationProvider>
+        <NotificationProvider>
+          <LocationProvider>
+            <App />
+          </LocationProvider>
+        </NotificationProvider>
       </AuthProvider>
     </BrowserRouter>
   </StrictMode>,

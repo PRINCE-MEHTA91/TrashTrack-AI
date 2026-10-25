@@ -78,6 +78,7 @@ function App() {
         <Route path="/citizen/map" element={<CitizenMapPage />} />
         <Route path="/citizen/notifications" element={<CitizenNotificationsPage />} />
         <Route path="/citizen/profile" element={<CitizenProfilePage />} />
+        <Route path="/citizen/settings" element={<CitizenProfilePage />} />
       </Route>
 
       {/* ── Admin routes (role = admin only) ── */}

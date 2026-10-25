@@ -4,8 +4,6 @@ import { getCitizenStats } from "../controllers/citizen.controller.js";
 
 const router = Router();
 
-// All citizen routes require a valid JWT AND the citizen role.
-// A worker or admin JWT will receive 403 Forbidden.
 router.use(verifyToken);
 router.use(requireRole(["citizen"]));
 

@@ -7,6 +7,7 @@ import {
   Map,
   Bell,
   User,
+  Settings,
   LogOut,
   Menu,
   X,
@@ -44,7 +45,7 @@ export default function CitizenLayout() {
     { to: "/citizen/community", icon: MessageSquare, label: "Community Complaints" },
     { to: "/citizen/map", icon: Map, label: "Map" },
     { to: "/citizen/notifications", icon: Bell, label: "Notifications", badge: unreadCount },
-    { to: "/citizen/profile", icon: User, label: "Profile" },
+    { to: "/citizen/profile", icon: Settings, label: "Settings" },
   ];
 
   const initials = getInitials(user?.full_name);
@@ -297,8 +298,8 @@ export default function CitizenLayout() {
                   onClick={() => setProfileOpen(false)}
                   className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-300 hover:text-white hover:bg-surface-muted transition-colors"
                 >
-                  <User className="w-4 h-4" />
-                  My Profile
+                  <Settings className="w-4 h-4" />
+                  Settings
                 </NavLink>
                 <NavLink
                   to="/citizen/notifications"

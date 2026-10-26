@@ -154,6 +154,10 @@ task.*
 **/tast_*
 **/task-*
 **/task_*
+tests/
+**/tests/
+__tests__/
+**/__tests__/
 *.test.js
 *.test.mjs
 *.test.ts
@@ -166,6 +170,10 @@ test-results/
 **/test-results/
 playwright-report/
 **/playwright-report/
+verify-*
+**/verify-*
+verify.*
+**/verify.*
 
 # 14. One-off Backend Scripts, Scaffolds & Ad-hoc Migrations
 check-*

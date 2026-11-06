@@ -21,6 +21,7 @@ import L from "leaflet";
 import { useAuth } from "../../context/AuthContext";
 import { useLocation } from "../../context/LocationContext";
 import { API_URL } from "../../config/api.js";
+import WasteClassificationPanel from "../../components/citizen/WasteClassificationPanel.js";
 
 // Fix Leaflet icon URLs in Vite builds
 delete L.Icon.Default.prototype._getIconUrl;
@@ -482,6 +483,14 @@ export default function CitizenReportPage() {
           onRemovePhoto={handleRemovePhoto}
           onNativeCameraClick={handleNativeCameraClick}
         />
+
+        {/* AI Waste Classification — appears after photo is captured */}
+        {formData.image_url && (
+          <WasteClassificationPanel
+            imageBase64={formData.image_url}
+            token={getToken()}
+          />
+        )}
 
         {/* Location: permission + live GPS status + manual pin placement option */}
         <LocationSection

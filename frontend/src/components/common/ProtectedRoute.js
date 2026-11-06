@@ -7,17 +7,10 @@ const ROLE_HOME = {
   admin: "/admin/home",
 };
 
-/**
+/*
  * ProtectedRoute – wraps routes that require authentication and a specific role.
- *
- * Props:
- *   allowedRoles  – array of role strings that can access this route, e.g. ["worker"]
- *   children      – the page component to render if access is granted
- *
- * Behaviour:
- *   - Not authenticated → redirect to /
- *   - Authenticated but wrong role → redirect to their own dashboard (or show 403)
- *   - Authenticated + correct role → render children
+ *    Authenticated but wrong role → redirect to their own dashboard (or show 403)
+ *    Authenticated + correct role → render children
  */
 export default function ProtectedRoute({ allowedRoles = [], children }) {
   const { user, loading } = useAuth();

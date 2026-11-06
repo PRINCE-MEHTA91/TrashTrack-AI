@@ -198,3 +198,17 @@ debug-*
 diagnose-*
 **/diagnose-*
 remove-comments-deep.mjs
+
+# ── ML Service ────────────────────────────────────────────────────────────────
+# Model weights — large binary files, never commit to Git
+ml-service/models/*.keras
+ml-service/models/*.h5
+ml-service/models/*.pb
+ml-service/models/*.tflite
+# Python virtual environment
+ml-service/venv/
+ml-service/.venv/
+ml-service/__pycache__/
+ml-service/**/__pycache__/
+ml-service/*.pyc
+ml-service/**/*.pyc

@@ -15,14 +15,10 @@ CREATE TABLE IF NOT EXISTS complaints (
   latitude        DOUBLE PRECISION,
   longitude       DOUBLE PRECISION,
   accuracy        DOUBLE PRECISION,
-  address         TEXT,          -- human-readable from reverse geocode
-
+  address         TEXT,        
   -- Photo (stored as base64 data URL or cloud URL)
   image_url       TEXT,
-
-  -- Lifecycle
   status          VARCHAR(30) NOT NULL DEFAULT 'SUBMITTED',
-  -- SUBMITTED → PENDING → IN_PROGRESS → RESOLVED | CLOSED | REJECTED
 
   assigned_worker_id UUID REFERENCES users(id) ON DELETE SET NULL,
   resolution_note TEXT,

@@ -32,7 +32,6 @@ export function getRedisCredentials() {
   const restUrl = process.env.UPSTASH_REDIS_REST_URL?.trim();
   const restToken = process.env.UPSTASH_REDIS_REST_TOKEN?.trim();
   const redisUrl = process.env.REDIS_URL?.trim();
-
   const isUpstashRest = Boolean(restUrl && restToken);
   const isIoRedis = Boolean(!isUpstashRest && redisUrl);
 
@@ -174,8 +173,8 @@ export async function checkRedisHealth({ timeoutMs = 4000 } = {}) {
     const errorType = err.name === "TimeoutError"
       ? "timeout"
       : /unauthorized|auth|forbidden/i.test(err.message)
-      ? "auth_failed"
-      : "network_error";
+        ? "auth_failed"
+        : "network_error";
 
     return {
       configured: true,

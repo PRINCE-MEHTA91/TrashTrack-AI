@@ -13,6 +13,7 @@ import workerTasksRoutes from "./routes/worker-tasks.routes.js";
 import adminDashboardRoutes from "./routes/admin-dashboard.routes.js";
 import adminComplaintsRoutes from "./routes/admin-complaints.routes.js";
 import notificationsRoutes from "./routes/notifications.routes.js";
+import classifyRoutes from "./routes/classify.routes.js";
 import { errorHandler } from "./middleware/error.middleware.js";
 
 import { query } from "./config/database.js";
@@ -138,6 +139,7 @@ app.use("/api/v1/admin/dashboard", adminDashboardRoutes);
 app.use("/api/v1/worker/tasks", workerTasksRoutes);
 app.use("/api/v1/worker", workerDutyRoutes);
 app.use("/api/v1/notifications", notificationsRoutes);
+app.use("/api/v1/classify", classifyRoutes);
 
 // Error handling middleware should be last
 app.use(errorHandler);
